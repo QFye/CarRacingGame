@@ -72,6 +72,10 @@ public class Car extends GameObj {
         this.id = id;
     }
 
+    public void setDir(double dir) {
+        this.dir = dir;
+    }
+
     // 更新汽车每一时刻的数值
     public void update() {
         // 平动计算

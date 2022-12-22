@@ -1,6 +1,9 @@
 package games;
 
 import java.net.*;
+import java.util.*;
+
+import javax.swing.JOptionPane;
 
 import games.GameWin.GamePanel;
 import net.sf.json.JSONObject;
@@ -9,13 +12,12 @@ import java.io.*;
 import obj.*;
 
 public class GameClient implements Runnable {
-    private Socket socket;
-    public boolean connectionState = false;
+    private Socket socket;// 套接字
+    private boolean connectionState = false;// 连接状态
     private DataOutputStream outputStream;
     private DataInputStream inputStream;
-    private GamePanel panel;
-    public static int curConnections = 0;
-    public User userInfo;
+    private GamePanel panel;// 与面板交互数据
+    private User userInfo;// 客户端用户信息
 
     GameClient(GamePanel panel) {
         this.panel = panel;
@@ -27,20 +29,31 @@ public class GameClient implements Runnable {
             // 连接套接字
             socket = new Socket("localhost", 18888);
 
-            // 等待服务器响应
+            // 通过用户名向服务器发送连接申请
+            DataOutputStream outputStream = new DataOutputStream(socket.getOutputStream());
+            JSONObject apply = new JSONObject();
+            apply.put("type", "apply");
+            apply.put("username", panel.getPlayerName());
+            outputStream.writeUTF(apply.toString());
+
+            // 等待服务器响应，成功则跳出
             boolean success = false;
             while (!success) {
                 Thread.sleep(1000);
                 try {
-                    DataInputStream inputStream = new DataInputStream(socket.getInputStream());
+                    // 尝试接收初始用户信息
+                    inputStream = new DataInputStream(socket.getInputStream());
                     String json = inputStream.readUTF();
                     JSONObject data = JSONObject.fromObject(json);
                     if (data.getString("type").equals("myInfo")) {
+                        // 接收成功则更新本地用户信息
                         userInfo = new User();
+                        userInfo.setName(data.getString("name"));
                         userInfo.setAttribute(null, data.getInt("id"), data.getDouble("x"), data.getDouble("y"),
                                 data.getDouble("dir"), data.getString("imgPath"));
-                        System.out.println(
-                                "客户端：id = " + userInfo.getId() + ",x = " + userInfo.getX() + ",y = " + userInfo.getY());
+                        // System.out.println(
+                        // "客户端：id = " + userInfo.getId() + ",x = " + userInfo.getX() + ",y = " +
+                        // userInfo.getY());
                         success = true;
                     }
                 } catch (Exception e) {
@@ -84,9 +97,12 @@ public class GameClient implements Runnable {
             // 连接到服务器端
             connect();
 
+            // 判断是否连接成功
             if (connectionState) {
 
+                // 利用接收的用户初始信息更新myCar的位置和id
                 panel.myCar.setPosition(userInfo.getX(), userInfo.getY());
+                panel.myCar.setDir(userInfo.getDir());
                 panel.myCar.setid(userInfo.getId());
                 panel.userList.put(userInfo.getId(), userInfo);
 
@@ -96,12 +112,11 @@ public class GameClient implements Runnable {
                     // 重绘
                     panel.repaint();
 
-                    // 将汽车信息写入userInfo并据此进行通信
+                    // 更新汽车信息并写入userInfo来据此进行通信
                     try {
                         outputStream = new DataOutputStream(socket.getOutputStream());
                         userInfo.update(panel.myCar.getx(), panel.myCar.gety(), panel.myCar.getDir());
                         JSONObject data = new JSONObject();
-
                         data.put("type", "user");
                         userInfo.writeInData(data);
                         outputStream.writeUTF(data.toString());
@@ -109,12 +124,22 @@ public class GameClient implements Runnable {
                     } catch (NotActiveException e) {
                         continue;
                     }
-                    // System.out.println("客户端：发送数据{id:" + panel.myCar.getid() + ",x:" +
-                    // panel.myCar.getx() + ",y:"
-                    // + panel.myCar.gety() + ",dir:"
-                    // + panel.myCar.getDir() + "}");
 
-                    // 判断是否达到胜利条件
+                    // 判断并发送聊天信息
+                    if (panel.chatPane.isSend()) {
+                        // 发送信息
+                        JSONObject data = new JSONObject();
+                        data.put("type", "msg");
+                        data.put("content", "[" + userInfo.getName() + "] " + panel.chatPane.getSendContent());
+                        outputStream.writeUTF(data.toString());
+                        outputStream.flush();
+                        // 重置发送状态
+                        panel.chatPane.setSend(false);
+                        panel.chatPane.resetContent();
+
+                    }
+
+                    // 判断是否达到胜利条件（随便写的，后面会改）
                     if (panel.myCar.gety() < -100) {
                         GameWin.status = Status.Suceeded;
                         System.out.println("You win");
@@ -134,11 +159,13 @@ public class GameClient implements Runnable {
 
         } catch (IOException e) {
             e.printStackTrace();
+            // 断连处理
             try {
+                JOptionPane.showInternalMessageDialog(null, "客户端与服务器断开连接", "消息提示", JOptionPane.INFORMATION_MESSAGE);
+                panel.getCardLayout().show(panel.getGameWinContainer(), "menu");
                 System.out.println("客户端：客户端异常断开连接");
                 socket.close();
                 connectionState = false;
-                reconnect();
             } catch (IOException e1) {
                 e1.printStackTrace();
             }
@@ -159,26 +186,19 @@ public class GameClient implements Runnable {
                     JSONObject data = JSONObject.fromObject(json);
 
                     if (data.getString("type").equals("user")) {
-                        // 接收每个玩家位置
+                        // 接收玩家信息
                         User user = new User();
+                        user.setName(data.getString("name"));
                         user.setAttribute(null, data.getInt("id"), data.getDouble("x"), data.getDouble("y"),
                                 data.getDouble("dir"), data.getString("imgPath"));
-                        System.out.println("客户端：接收玩家" + user.getId() + "的信息");
                         panel.userList.put(user.getId(), user);
                     } else if (data.getString("type").equals("msg")) {
-                        System.out.println(data.getString("content"));
+                        // 接收消息类信息
+                        panel.chatPane.appendMsg(new Date() + "<br>" + data.getString("content"));
                         if (data.containsKey("concurrent")) {
-                            System.out.println("客户端：服务器在线人数：" + data.getInt("concurrent"));
+                            panel.chatPane.appendMsg(new Date() + "<br>服务器在线人数：" + data.getInt("concurrent"));
                         }
                     }
-
-                    // 接收当前在线人数
-                    // int concurrentPlayer = (int) data.get("concurrent");
-                    // System.out.println("当前在线人数：" + concurrentPlayer);
-
-                    // 接收信息
-                    // String msg = (String) data.get("msg");
-                    // System.out.println("客户端：" + msg);
                 }
 
             } catch (Exception e) {
@@ -192,7 +212,7 @@ public class GameClient implements Runnable {
 
     // 心跳包线程
     class socketHeart implements Runnable {
-        private int from;
+        private int from;// 相关联的玩家编号
 
         socketHeart(int from) {
             this.from = from;
@@ -203,13 +223,14 @@ public class GameClient implements Runnable {
             try {
                 System.out.println("客户端：心跳包线程已启动");
                 while (true) {
-                    // 每间隔8s生成一个心跳包对象并发送给服务器
+                    // 每间隔10s生成一个心跳包对象并发送给服务器
                     try {
-                        Thread.sleep(8000);
+                        Thread.sleep(10000);
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
                     System.out.println("客户端：发送心跳包");
+                    // 写入心跳包信息
                     outputStream = new DataOutputStream(socket.getOutputStream());
                     JSONObject data = new JSONObject();
                     data.put("type", "heart");
@@ -219,11 +240,13 @@ public class GameClient implements Runnable {
                 }
             } catch (IOException e) {
                 e.printStackTrace();
+                // 异常处理
                 try {
+                    JOptionPane.showInternalMessageDialog(null, "客户端与服务器断开连接", "消息提示", JOptionPane.INFORMATION_MESSAGE);
+                    panel.getCardLayout().show(panel.getGameWinContainer(), "menu");
                     System.out.println("客户端：心跳包异常");
                     socket.close();
                     connectionState = false;
-                    reconnect();
                 } catch (IOException e1) {
                     e1.printStackTrace();
                 }

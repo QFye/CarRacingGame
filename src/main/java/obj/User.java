@@ -5,12 +5,17 @@ import java.net.*;
 import net.sf.json.JSONObject;
 
 public class User {
+    private String name;
     private int id;
     private double x, y;
     private double dir;
     private String imgPath;
     private Socket socket;
     private boolean online;
+
+    public void setName(String name) {
+        this.name = name;
+    }
 
     public void setAttribute(Socket socket, int id, double x, double y, double dir, String imgPath) {
         this.socket = socket;
@@ -30,6 +35,10 @@ public class User {
 
     public Socket getSocket() {
         return socket;
+    }
+
+    public String getName() {
+        return name;
     }
 
     public int getId() {
@@ -61,6 +70,7 @@ public class User {
     }
 
     public void writeInData(JSONObject data) {
+        data.put("name", name);
         data.put("id", id);
         data.put("x", x);
         data.put("y", y);
