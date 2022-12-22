@@ -16,6 +16,12 @@ public class GameUtils {
         return Toolkit.getDefaultToolkit().getImage(path);
     }
 
+    // 获得主菜单背景图片
+    public static Image getMenuBgImg() {
+        String path = GameUtils.class.getClassLoader().getResource("imgs/menubg.jpeg").getPath();
+        return Toolkit.getDefaultToolkit().getImage(path);
+    }
+
     public static int CarWidth = 50;
     public static int CarHeight = 70;
 

@@ -34,34 +34,51 @@ public class GameServer {
 
                 // 将当前用户信息加入列表中
                 if (apply.getString("type").equals("apply")) {
-                    int currentUser = userList.size();
-                    User newUser = new User();
-                    newUser.setName(apply.getString("username"));
-                    newUser.setAttribute(socket, currentUser + 1, 140 + (currentUser + 1) * 150, 600, 0,
-                            "imgs/car.bmp");
-                    userList.add(newUser);
-                    onlineList.add(newUser.getName());
-
-                    // 向客户端发送当前玩家信息
-                    DataOutputStream curOutputStream = new DataOutputStream(socket.getOutputStream());
-                    JSONObject myData = new JSONObject();
-                    myData.put("type", "myInfo");
-                    newUser.writeInData(myData);
-                    curOutputStream.writeUTF(myData.toString());
-                    curOutputStream.flush();
-
-                    // 连接成功后创建服务器端线程
-                    new Thread(new ServerThread(newUser)).start();
-
-                    // 向所有客户端发送玩家上线信息及游戏人数
+                    // 检测是否重名
+                    boolean isRegistered = false;
                     for (User user : userList) {
-                        DataOutputStream outputStream = new DataOutputStream(user.getSocket().getOutputStream());
-                        JSONObject data = new JSONObject();
-                        data.put("type", "msg");
-                        data.put("content", "玩家 " + newUser.getName() + " 加入服务器");
-                        data.put("concurrent", onlineList.size());
-                        outputStream.writeUTF(data.toString());
-                        outputStream.flush();
+                        if (user.getName().equals(apply.getString("username"))) {
+                            isRegistered = true;
+                            break;
+                        }
+                    }
+                    // 若重名，则反馈客户端
+                    if (isRegistered) {
+                        DataOutputStream outputStream = new DataOutputStream(socket.getOutputStream());
+                        JSONObject reject = new JSONObject();
+                        reject.put("type", "reject");
+                        outputStream.writeUTF(reject.toString());
+                    } else {
+                        // 分配用户信息（id和汽车位置等）
+                        int currentUser = userList.size();
+                        User newUser = new User();
+                        newUser.setName(apply.getString("username"));
+                        newUser.setAttribute(socket, currentUser + 1, 120 + (currentUser + 1) * 120, 2800, 0,
+                                "imgs/car.bmp");
+                        userList.add(newUser);
+                        onlineList.add(newUser.getName());
+
+                        // 向客户端发送当前玩家信息
+                        DataOutputStream curOutputStream = new DataOutputStream(socket.getOutputStream());
+                        JSONObject myData = new JSONObject();
+                        myData.put("type", "myInfo");
+                        newUser.writeInData(myData);
+                        curOutputStream.writeUTF(myData.toString());
+                        curOutputStream.flush();
+
+                        // 连接成功后创建服务器端线程
+                        new Thread(new ServerThread(newUser)).start();
+
+                        // 向所有客户端发送玩家上线信息及游戏人数
+                        for (User user : userList) {
+                            DataOutputStream outputStream = new DataOutputStream(user.getSocket().getOutputStream());
+                            JSONObject data = new JSONObject();
+                            data.put("type", "msg");
+                            data.put("content", "玩家 " + newUser.getName() + " 加入服务器");
+                            data.put("concurrent", onlineList.size());
+                            outputStream.writeUTF(data.toString());
+                            outputStream.flush();
+                        }
                     }
                 }
 

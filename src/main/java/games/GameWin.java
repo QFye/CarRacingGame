@@ -110,7 +110,7 @@ public class GameWin extends JFrame {
         // 绘制
         @Override
         public void paintComponent(Graphics g) {
-            g.drawImage(GameUtils.getBgImg(), 0, 0, GameWin.WightWidth, GameWin.WightHeight, this);
+            g.drawImage(GameUtils.getMenuBgImg(), 0, 0, GameWin.WightWidth, GameWin.WightHeight, this);
         }
 
     }
@@ -150,10 +150,13 @@ public class GameWin extends JFrame {
             yButton.addActionListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent e) {
-                    // 如果没有游戏面板则创建
+                    // 如果没有游戏面板则创建，否则则启动
                     if (gamePanel == null) {
                         gamePanel = new GamePanel();
                         container.add(gamePanel, "game");
+                    } else {
+                        new Thread(new GameClient(gamePanel)).start();
+                        ;
                     }
                     // 更新用户名
                     playerName = textField.getText();
@@ -197,7 +200,9 @@ public class GameWin extends JFrame {
     public class GamePanel extends JPanel {
         public Car myCar;
         public Map<Integer, User> userList = new TreeMap<>();
+        public JButton settingsButton;
         public ChatPane chatPane = new ChatPane();
+        private int originX = 0, originY = -2200;
 
         public String getPlayerName() {
             return playerName;
@@ -211,21 +216,21 @@ public class GameWin extends JFrame {
             return container;
         }
 
-        GamePanel() {
+        public void launch() {
             // 生成myCar
             if (myCar == null) {
                 this.myCar = new Car();
-                myCar.setAttribute(1, 240, 600, 0, "imgs/car.bmp", GameUtils.CarWidth, GameUtils.CarHeight);
+                myCar.setAttribute(1, 240, 2800, 0, "imgs/car.bmp", GameUtils.CarWidth, GameUtils.CarHeight);
             }
             this.setLayout(null);
             // 设置按钮
-            JButton SettingsButton = new JButton("设置");
-            SettingsButton.setLocation(900, 20);
-            SettingsButton.setSize(60, 30);
-            this.add(SettingsButton);
+            settingsButton = new JButton("设置");
+            settingsButton.setLocation(900, 2220);
+            settingsButton.setSize(60, 30);
+            this.add(settingsButton);
 
             // 聊天面板
-            chatPane.setLocation(30, 550);
+            chatPane.setLocation(30, 2750);
             this.add(chatPane);
 
             // 键盘监听
@@ -345,13 +350,25 @@ public class GameWin extends JFrame {
 
         }
 
+        GamePanel() {
+            launch();
+        }
+
         // 组件绘制接口
         @Override
         public void paintComponent(Graphics g) {
             // 更新汽车信息
             myCar.update();
+            // 更新原点坐标（移动背景图片来实现汽车的移动效果）
+            if (myCar.gety() > 500 && myCar.gety() < 2500) {
+                originY = 300 - (int) myCar.gety();
+                settingsButton.setLocation(900, -280 + (int) myCar.gety());
+                chatPane.setLocation(30, 250 + (int) myCar.gety());
+            }
+            // 设置原点
+            g.translate(originX, originY);
             // 绘制背景
-            g.drawImage(GameUtils.getBgImg(), 0, 0, GameWin.WightWidth, GameWin.WightHeight, this);
+            g.drawImage(GameUtils.getBgImg(), 0, 0, 1000, 3000, this);
             // 绘制汽车
             Graphics2D g2d = (Graphics2D) g;
             userList.forEach((id, user) -> {

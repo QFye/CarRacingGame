@@ -27,7 +27,8 @@ public class GameClient implements Runnable {
     private void connect() {
         try {
             // 连接套接字
-            socket = new Socket("localhost", 18888);
+            if (socket == null)
+                socket = new Socket("localhost", 18888);
 
             // 通过用户名向服务器发送连接申请
             DataOutputStream outputStream = new DataOutputStream(socket.getOutputStream());
@@ -55,6 +56,13 @@ public class GameClient implements Runnable {
                         // "客户端：id = " + userInfo.getId() + ",x = " + userInfo.getX() + ",y = " +
                         // userInfo.getY());
                         success = true;
+                    } else if (data.getString("type").equals("reject")) {
+                        // 提示用户更改名称
+                        JOptionPane.showMessageDialog(null, "该用户名已被注册，请更换名称后重试", "消息提示",
+                                JOptionPane.INFORMATION_MESSAGE);
+                        // 更换面板
+                        panel.getCardLayout().show(panel.getGameWinContainer(), "menu");
+                        return;
                     }
                 } catch (Exception e) {
                     success = false;
