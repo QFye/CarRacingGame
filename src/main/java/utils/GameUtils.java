@@ -4,6 +4,11 @@ import java.awt.*;
 
 public class GameUtils {
 
+    // 获得汽车路径字符串
+    public static String getCarPathString(int id) {
+        return "imgs/car" + Integer.toString(id) + ".png";
+    }
+
     // 获得物体图片
     public static Image getObjImg(String path) {
         String targetPath = GameUtils.class.getClassLoader().getResource(path).getPath();
@@ -22,7 +27,7 @@ public class GameUtils {
         return Toolkit.getDefaultToolkit().getImage(path);
     }
 
-    public static int CarWidth = 50;
+    public static int CarWidth = 35;
     public static int CarHeight = 70;
 
 }

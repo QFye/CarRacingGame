@@ -36,7 +36,12 @@ CAR RACING DEMO
     │  │      │      
     │  │      └─imgs
     │  │              bg.jpg
-    │  │              car.bmp
+    │  │              car1.png
+    │  │              car2.png
+    │  │              car3.png
+    │  │              car4.png
+    │  │              car5.png
+    |  |              menubg.jpeg
     │  │              
     │  └─test
     │      └─java
@@ -63,7 +68,11 @@ CAR RACING DEMO
         │  │      
         │  ├─imgs
         │  │      bg.jpg
-        │  │      car.bmp
+        │  │      car1.png
+        │  │      car2.png
+        │  │      car3.png
+        │  │      car4.png
+        │  │      car5.png
         |  |      menubg.jpeg
         │  │      
         │  ├─obj
@@ -133,6 +142,13 @@ CAR RACING DEMO
 1. 更改了背景素材
 2. 实现了场景跟随汽车移动
 3. 对用户名注册时添加了重名检测
+
+---
+
+##### $Test\ V0.1.3\ 版本内容更新$
+1. 修复了上次更新后无法与聊天栏交互的bug
+2. 添加汽车样式至五种，每个玩家都能拥有不同外形的汽车了
+3. 增加了服务器人数上限检测（5人）
 
 ---
 

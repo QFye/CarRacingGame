@@ -5,6 +5,7 @@ import java.util.*;
 import net.sf.json.JSONObject;
 import java.io.*;
 import obj.*;
+import utils.GameUtils;
 
 public class GameServer {
 
@@ -47,6 +48,13 @@ public class GameServer {
                         DataOutputStream outputStream = new DataOutputStream(socket.getOutputStream());
                         JSONObject reject = new JSONObject();
                         reject.put("type", "reject");
+                        reject.put("reason", "该用户名已被注册，请更换名称后重试");
+                        outputStream.writeUTF(reject.toString());
+                    } else if (userList.size() >= 5) {
+                        DataOutputStream outputStream = new DataOutputStream(socket.getOutputStream());
+                        JSONObject reject = new JSONObject();
+                        reject.put("type", "reject");
+                        reject.put("reason", "服务器人数已达上限");
                         outputStream.writeUTF(reject.toString());
                     } else {
                         // 分配用户信息（id和汽车位置等）
@@ -54,7 +62,7 @@ public class GameServer {
                         User newUser = new User();
                         newUser.setName(apply.getString("username"));
                         newUser.setAttribute(socket, currentUser + 1, 120 + (currentUser + 1) * 120, 2800, 0,
-                                "imgs/car.bmp");
+                                GameUtils.getCarPathString(currentUser + 1));
                         userList.add(newUser);
                         onlineList.add(newUser.getName());
 

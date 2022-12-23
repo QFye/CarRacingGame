@@ -220,17 +220,18 @@ public class GameWin extends JFrame {
             // 生成myCar
             if (myCar == null) {
                 this.myCar = new Car();
-                myCar.setAttribute(1, 240, 2800, 0, "imgs/car.bmp", GameUtils.CarWidth, GameUtils.CarHeight);
+                myCar.setAttribute(1, 240, 2800, 0, GameUtils.getCarPathString(1), GameUtils.CarWidth,
+                        GameUtils.CarHeight);
             }
             this.setLayout(null);
             // 设置按钮
             settingsButton = new JButton("设置");
-            settingsButton.setLocation(900, 2220);
+            settingsButton.setLocation(900, 20);
             settingsButton.setSize(60, 30);
             this.add(settingsButton);
 
             // 聊天面板
-            chatPane.setLocation(30, 2750);
+            chatPane.setLocation(30, 550);
             this.add(chatPane);
 
             // 键盘监听
@@ -362,25 +363,25 @@ public class GameWin extends JFrame {
             // 更新原点坐标（移动背景图片来实现汽车的移动效果）
             if (myCar.gety() > 500 && myCar.gety() < 2500) {
                 originY = 300 - (int) myCar.gety();
-                settingsButton.setLocation(900, -280 + (int) myCar.gety());
-                chatPane.setLocation(30, 250 + (int) myCar.gety());
+                // settingsButton.setLocation(900, -280 + (int) myCar.gety());
+                // chatPane.setLocation(30, 250 + (int) myCar.gety());
             }
             // 设置原点
-            g.translate(originX, originY);
+            // g.translate(originX, originY);
             // 绘制背景
-            g.drawImage(GameUtils.getBgImg(), 0, 0, 1000, 3000, this);
+            g.drawImage(GameUtils.getBgImg(), originX, originY, 1000, 3000, this);
             // 绘制汽车
             Graphics2D g2d = (Graphics2D) g;
             userList.forEach((id, user) -> {
                 // 旋转画笔
-                g2d.rotate(Math.toRadians(user.getDir()), user.getX() + (GameUtils.CarWidth >> 1),
-                        user.getY() + (GameUtils.CarHeight >> 1));
+                g2d.rotate(Math.toRadians(user.getDir()), user.getX() + originX + (GameUtils.CarWidth >> 1),
+                        user.getY() + originY + (GameUtils.CarHeight >> 1));
                 // 绘制图片
-                g2d.drawImage(GameUtils.getObjImg(user.getImgPath()), (int) user.getX(),
-                        (int) user.getY(), GameUtils.CarWidth, GameUtils.CarHeight, this);
+                g2d.drawImage(GameUtils.getObjImg(user.getImgPath()), (int) user.getX() + originX,
+                        (int) user.getY() + originY, GameUtils.CarWidth, GameUtils.CarHeight, this);
                 // 回溯画笔角度
-                g2d.rotate(-Math.toRadians(user.getDir()), user.getX() + (GameUtils.CarWidth >> 1),
-                        user.getY() + (GameUtils.CarHeight >> 1));
+                g2d.rotate(-Math.toRadians(user.getDir()), user.getX() + originX + (GameUtils.CarWidth >> 1),
+                        user.getY() + originY + (GameUtils.CarHeight >> 1));
                 // 绘制用户名
                 if (user.getName() != null) {
                     // 抗锯齿
@@ -398,8 +399,9 @@ public class GameWin extends JFrame {
                     FontMetrics fm = g2d.getFontMetrics(font);
                     int textWidth = fm.stringWidth(user.getName());
                     // 绘制字符串
-                    g2d.drawString(user.getName(), (float) user.getX() + (GameUtils.CarWidth - textWidth >> 1),
-                            (float) user.getY() - 10);
+                    g2d.drawString(user.getName(),
+                            (float) user.getX() + originX + (GameUtils.CarWidth - textWidth >> 1),
+                            (float) user.getY() + originY - 10);
                 }
             });
         }

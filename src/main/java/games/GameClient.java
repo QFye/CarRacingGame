@@ -58,7 +58,7 @@ public class GameClient implements Runnable {
                         success = true;
                     } else if (data.getString("type").equals("reject")) {
                         // 提示用户更改名称
-                        JOptionPane.showMessageDialog(null, "该用户名已被注册，请更换名称后重试", "消息提示",
+                        JOptionPane.showMessageDialog(null, data.getString("reason"), "消息提示",
                                 JOptionPane.INFORMATION_MESSAGE);
                         // 更换面板
                         panel.getCardLayout().show(panel.getGameWinContainer(), "menu");
