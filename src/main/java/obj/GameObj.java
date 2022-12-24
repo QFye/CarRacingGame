@@ -7,7 +7,7 @@ public class GameObj extends JComponent {
     protected int id;// 物品id
     protected double x, y, dir;// x,y坐标、方向角（与y轴负方向夹角）
     protected String ImgPath;// 图像路径
-    protected int ImgWidth, ImgHeight;
+    protected int ImgWidth, ImgHeight;// 图像长宽
 
     public boolean isInfoObj() {
         return dir == -1;

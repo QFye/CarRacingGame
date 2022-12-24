@@ -10,7 +10,7 @@ import utils.GameUtils;
 public class GameServer {
 
     // 用户列表
-    public ArrayList<User> userList = new ArrayList<>();
+    public TreeMap<String, User> userList = new TreeMap<>();
     // 在线用户列表
     public ArrayList<String> onlineList = new ArrayList<>();
 
@@ -35,36 +35,29 @@ public class GameServer {
 
                 // 将当前用户信息加入列表中
                 if (apply.getString("type").equals("apply")) {
-                    // 检测是否重名
-                    boolean isRegistered = false;
-                    for (User user : userList) {
-                        if (user.getName().equals(apply.getString("username"))) {
-                            isRegistered = true;
-                            break;
-                        }
-                    }
-                    // 若重名，则反馈客户端
-                    if (isRegistered) {
-                        DataOutputStream outputStream = new DataOutputStream(socket.getOutputStream());
-                        JSONObject reject = new JSONObject();
-                        reject.put("type", "reject");
-                        reject.put("reason", "该用户名已被注册，请更换名称后重试");
-                        outputStream.writeUTF(reject.toString());
-                    } else if (userList.size() >= 5) {
+                    // 检测是否重名，若重名，则反馈客户端
+                    if (userList.size() >= 5) {
                         DataOutputStream outputStream = new DataOutputStream(socket.getOutputStream());
                         JSONObject reject = new JSONObject();
                         reject.put("type", "reject");
                         reject.put("reason", "服务器人数已达上限");
                         outputStream.writeUTF(reject.toString());
                     } else {
-                        // 分配用户信息（id和汽车位置等）
-                        int currentUser = userList.size();
                         User newUser = new User();
-                        newUser.setName(apply.getString("username"));
-                        newUser.setAttribute(socket, currentUser + 1, 120 + (currentUser + 1) * 120, 2800, 0,
-                                GameUtils.getCarPathString(currentUser + 1));
-                        userList.add(newUser);
-                        onlineList.add(newUser.getName());
+                        if (userList.containsKey(apply.getString("username"))) {
+                            newUser = userList.get(apply.getString("username"));
+                            newUser.setOnline(true);
+                            newUser.setSocket(socket);
+                            onlineList.add(newUser.getName());
+                        } else {
+                            // 分配用户信息（id和汽车位置等）
+                            int currentUser = userList.size();
+                            newUser.setName(apply.getString("username"));
+                            newUser.setAttribute(socket, currentUser + 1, 120 + (currentUser + 1) * 120, 2800, 0,
+                                    GameUtils.getCarPathString(currentUser + 1));
+                            userList.put(newUser.getName(), newUser);
+                            onlineList.add(newUser.getName());
+                        }
 
                         // 向客户端发送当前玩家信息
                         DataOutputStream curOutputStream = new DataOutputStream(socket.getOutputStream());
@@ -78,15 +71,22 @@ public class GameServer {
                         new Thread(new ServerThread(newUser)).start();
 
                         // 向所有客户端发送玩家上线信息及游戏人数
-                        for (User user : userList) {
-                            DataOutputStream outputStream = new DataOutputStream(user.getSocket().getOutputStream());
-                            JSONObject data = new JSONObject();
-                            data.put("type", "msg");
-                            data.put("content", "玩家 " + newUser.getName() + " 加入服务器");
-                            data.put("concurrent", onlineList.size());
-                            outputStream.writeUTF(data.toString());
-                            outputStream.flush();
-                        }
+                        userList.forEach((name, user) -> {
+                            if (user.isOnline()) {
+                                try {
+                                    DataOutputStream outputStream = new DataOutputStream(
+                                            user.getSocket().getOutputStream());
+                                    JSONObject data = new JSONObject();
+                                    data.put("type", "msg");
+                                    data.put("content", "玩家 " + name + " 加入服务器");
+                                    data.put("concurrent", onlineList.size());
+                                    outputStream.writeUTF(data.toString());
+                                    outputStream.flush();
+                                } catch (Exception e) {
+                                    e.printStackTrace();
+                                }
+                            }
+                        });
                     }
                 }
 
@@ -94,25 +94,28 @@ public class GameServer {
         } catch (IOException e) {
             e.printStackTrace();
         } finally {
-            try {
-                System.out.println("服务器端：服务器断开连接");
-                for (User user : userList) {
+            System.out.println("服务器端：服务器断开连接");
+            userList.forEach((name, user) -> {
+                try {
                     // 关闭用户套接字
                     user.getSocket().close();
 
                     // 判断是否在线
-                    if (!user.isOnline())
-                        continue;
-
-                    // 向在线用户发送断连消息
-                    DataOutputStream outputStream = new DataOutputStream(user.getSocket().getOutputStream());
-                    JSONObject data = new JSONObject();
-                    data.put("type", "msg");
-                    data.put("content", "服务器断开连接");
-                    outputStream.writeUTF(data.toString());
-                    outputStream.flush();
+                    if (user.isOnline()) {
+                        // 向在线用户发送断连消息
+                        DataOutputStream outputStream = new DataOutputStream(user.getSocket().getOutputStream());
+                        JSONObject data = new JSONObject();
+                        data.put("type", "msg");
+                        data.put("content", "服务器断开连接");
+                        outputStream.writeUTF(data.toString());
+                        outputStream.flush();
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
                 }
-                userList.clear();
+            });
+            userList.clear();
+            try {
                 server.close();
             } catch (IOException e) {
                 e.printStackTrace();
@@ -134,7 +137,7 @@ public class GameServer {
         public synchronized void run() {
             try {
 
-                while (true) {
+                while (curUser.isOnline()) {
 
                     // 从客户端读取数据
                     DataInputStream inputStream = new DataInputStream(curUser.getSocket().getInputStream());
@@ -146,37 +149,80 @@ public class GameServer {
                     if (data.getString("type").equals("heart")) {
                         int heartsource = data.getInt("from");
                         System.out.println("服务器端：接收玩家" + heartsource + "的心跳包");
-                    } else {
-                        // 处理用户信息及聊天信息
-                        // 向每个客户端发送数据
-                        for (int i = 0; i < userList.size(); i++) {
-                            // 不在线则跳过
-                            if (!userList.get(i).isOnline())
-                                continue;
-                            try {
-                                DataOutputStream outputStream = new DataOutputStream(
-                                        userList.get(i).getSocket().getOutputStream());
-                                outputStream.writeUTF(json);
-                                outputStream.flush();
-                            } catch (Exception e) {
-                                // 更改用户连接状态
-                                userList.get(i).setOnline(false);
-                                onlineList.remove(userList.get(i).getName());
-                                // 向其他用户发送断连提示
-                                for (User user : userList) {
-                                    // 判断是否在线
-                                    if (!user.isOnline())
-                                        continue;
+                    } else if (data.getString("type").equals("msg")) {
+                        // 处理消息发送
+                        userList.forEach((name, user) -> {
+                            // 判断是否在线
+                            if (user.isOnline()) {
+                                try {
                                     // 向在线用户发送断连消息
                                     DataOutputStream outputStream = new DataOutputStream(
                                             user.getSocket().getOutputStream());
-                                    JSONObject msg = new JSONObject();
-                                    msg.put("type", "msg");
-                                    msg.put("content", "玩家 " + userList.get(i).getName() + " 断开连接");
-                                    msg.put("concurrent", onlineList.size());
-                                    outputStream.writeUTF(msg.toString());
+                                    outputStream.writeUTF(json);
                                     outputStream.flush();
+                                } catch (Exception e2) {
+                                    e2.printStackTrace();
                                 }
+                            }
+                        });
+                    } else {
+                        // 处理用户信息及聊天信息
+                        // 创建临时变量
+                        User cur = userList.get(data.getString("name")), update = new User();
+                        update.setName(cur.getName());
+                        update.setAttribute(cur.getSocket(), cur.getId(), data.getDouble("x"), data.getDouble("y"),
+                                data.getDouble("dir"), cur.getImgPath());
+                        // 判断是否碰撞
+                        boolean isCollide = false;
+                        Iterator<User> it = userList.values().iterator();
+                        while (it.hasNext()) {
+                            User ne = it.next();
+                            if (!ne.getName().equals(cur.getName())) {
+                                if (update.isCollidingWith(ne))
+                                    isCollide = true;
+                            }
+                        }
+                        // 若不碰撞则将临时变量存入列表中
+                        if (!isCollide)
+                            userList.put(update.getName(), update);
+                        // 向每个客户端发送数据
+                        for (int i = 0; i < onlineList.size(); i++) {
+                            // 不在线则跳过
+                            if (!userList.get(onlineList.get(i)).isOnline())
+                                continue;
+                            try {
+                                DataOutputStream outputStream = new DataOutputStream(userList.get(
+                                        onlineList.get(i)).getSocket().getOutputStream());
+                                JSONObject outjson = new JSONObject();
+                                outjson.put("type", "user");
+                                cur.writeInData(outjson);
+                                outputStream.writeUTF(outjson.toString());
+                                outputStream.flush();
+                            } catch (Exception e) {
+                                // 固定发送消息（lambda体内只能引用外部常量）
+                                final String content = "玩家 " + onlineList.get(i) + " 断开连接";
+                                // 更改用户连接状态
+                                userList.get(onlineList.get(i)).setOnline(false);
+                                onlineList.remove(i);
+                                // 向其他用户发送断连提示
+                                userList.forEach((name, user) -> {
+                                    // 判断是否在线
+                                    if (user.isOnline()) {
+                                        try {
+                                            // 向在线用户发送断连消息
+                                            DataOutputStream outputStream = new DataOutputStream(
+                                                    user.getSocket().getOutputStream());
+                                            JSONObject msg = new JSONObject();
+                                            msg.put("type", "msg");
+                                            msg.put("content", content);
+                                            msg.put("concurrent", onlineList.size());
+                                            outputStream.writeUTF(msg.toString());
+                                            outputStream.flush();
+                                        } catch (Exception e2) {
+                                            e2.printStackTrace();
+                                        }
+                                    }
+                                });
                             }
                         }
                     }

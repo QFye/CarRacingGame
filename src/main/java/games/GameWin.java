@@ -15,7 +15,7 @@ public class GameWin extends JFrame {
     private MenuPanel menuPanel;
     private InitPanel initPanel;
     private GamePanel gamePanel;
-    public static int WightWidth = 1000, WightHeight = 800;
+    public static int WightWidth = 1000, WightHeight = 800;// 窗体长宽
     private CardLayout cardLayout = new CardLayout();
     private Container container;
     private String playerName;
@@ -163,12 +163,7 @@ public class GameWin extends JFrame {
                     // 切换游戏面板
                     cardLayout.show(container, "game");
                     // 更改键盘焦点
-                    if (!gamePanel.isFocusable()) {
-                        gamePanel.setFocusable(true);
-                    }
-                    if (!gamePanel.isFocusOwner()) {
-                        gamePanel.requestFocusInWindow();
-                    }
+                    gamePanel.getFocused();
                     // 隐藏当前面板
                     initPanel.setVisible(false);
                 }
@@ -197,12 +192,13 @@ public class GameWin extends JFrame {
     }
 
     // 面板三：游戏面板
-    public class GamePanel extends JPanel {
+    public class GamePanel extends JLayeredPane {
         public Car myCar;
         public Map<Integer, User> userList = new TreeMap<>();
         public JButton settingsButton;
         public ChatPane chatPane = new ChatPane();
-        private int originX = 0, originY = -2200;
+        private StopPanel stopPanel = new StopPanel();
+        private int originX = 0, originY = -2200;// 长地图的相对原点坐标（设地图左上角为原点）
 
         public String getPlayerName() {
             return playerName;
@@ -216,6 +212,15 @@ public class GameWin extends JFrame {
             return container;
         }
 
+        public void getFocused() {
+            if (!this.isFocusable()) {
+                this.setFocusable(true);
+            }
+            if (!this.isFocusOwner()) {
+                this.requestFocusInWindow();
+            }
+        }
+
         public void launch() {
             // 生成myCar
             if (myCar == null) {
@@ -224,15 +229,39 @@ public class GameWin extends JFrame {
                         GameUtils.CarHeight);
             }
             this.setLayout(null);
-            // 设置按钮
-            settingsButton = new JButton("设置");
+
+            // 设置暂停/继续按钮
+            settingsButton = new JButton("暂停");
             settingsButton.setLocation(900, 20);
             settingsButton.setSize(60, 30);
-            this.add(settingsButton);
+            settingsButton.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    if (GameWin.status == Status.InGame) {
+                        stopPanel.getFocused();
+                        stopPanel.setVisible(true);
+                        GameWin.status = Status.Suspend;
+                        settingsButton.setText("继续");
+                    } else if (GameWin.status == Status.Suspend) {
+                        // 切换键盘焦点
+                        gamePanel.getFocused();
+                        // 隐藏面板
+                        stopPanel.setVisible(false);
+                        // 更改游戏状态
+                        GameWin.status = Status.InGame;
+                        // 更改按钮状态
+                        settingsButton.setText("暂停");
+                    }
+                }
+            });
+            this.add(settingsButton, JLayeredPane.MODAL_LAYER);
 
             // 聊天面板
             chatPane.setLocation(30, 550);
-            this.add(chatPane);
+            this.add(chatPane, JLayeredPane.MODAL_LAYER);
+
+            // 增加暂停面板
+            this.add(stopPanel, JLayeredPane.DRAG_LAYER);
 
             // 键盘监听
             this.addKeyListener(new KeyListener() {
@@ -327,6 +356,13 @@ public class GameWin extends JFrame {
                     if (e.getKeyCode() == KeyEvent.VK_RIGHT) {
                         right = false;
                     }
+                    // ESC键打开暂停面板
+                    if (e.getKeyCode() == KeyEvent.VK_ESCAPE) {
+                        GameWin.status = Status.Suspend;
+                        stopPanel.setVisible(true);
+                        stopPanel.getFocused();
+                        settingsButton.setText("继续");
+                    }
                 }
 
             });
@@ -336,12 +372,9 @@ public class GameWin extends JFrame {
             this.addMouseListener(new MouseInputAdapter() {
                 @Override
                 public void mouseClicked(MouseEvent e) {
-                    if (!gamePanel.isFocusable()) {
-                        gamePanel.setFocusable(true);
-                    }
-                    if (!gamePanel.isFocusOwner()) {
-                        gamePanel.requestFocusInWindow();
-                    }
+                    // 这里需要判断是否处于暂停状态
+                    if (GameWin.status != Status.Suspend)
+                        gamePanel.getFocused();
                     super.mouseClicked(e);
                 }
             });
@@ -359,20 +392,20 @@ public class GameWin extends JFrame {
         @Override
         public void paintComponent(Graphics g) {
             // 更新汽车信息
-            myCar.update();
+            if (GameWin.status == Status.InGame || GameWin.status == Status.Suspend)
+                myCar.update();
             // 更新原点坐标（移动背景图片来实现汽车的移动效果）
             if (myCar.gety() > 500 && myCar.gety() < 2500) {
                 originY = 300 - (int) myCar.gety();
-                // settingsButton.setLocation(900, -280 + (int) myCar.gety());
-                // chatPane.setLocation(30, 250 + (int) myCar.gety());
             }
-            // 设置原点
-            // g.translate(originX, originY);
             // 绘制背景
             g.drawImage(GameUtils.getBgImg(), originX, originY, 1000, 3000, this);
             // 绘制汽车
             Graphics2D g2d = (Graphics2D) g;
             userList.forEach((id, user) -> {
+                // System.out.println("width = " + user.getBoxWidth() + ", Height = " +
+                // user.getBoxHeight() + ", x = "
+                // + user.getCenterX() + ", y = " + user.getCenterY());
                 // 旋转画笔
                 g2d.rotate(Math.toRadians(user.getDir()), user.getX() + originX + (GameUtils.CarWidth >> 1),
                         user.getY() + originY + (GameUtils.CarHeight >> 1));
@@ -427,6 +460,7 @@ public class GameWin extends JFrame {
                 return sendContent;
             }
 
+            // 重置输入框消息
             public void resetContent() {
                 textField.setText("");
             }
@@ -492,6 +526,119 @@ public class GameWin extends JFrame {
 
         }
 
+        // 暂停面板
+        public class StopPanel extends JPanel {
+
+            // 按钮名称
+            private final String[] buttonName = { "返回游戏", "查看帮助", "设置", "返回主菜单" };
+
+            // 获取焦点
+            public void getFocused() {
+                if (!this.isFocusable()) {
+                    this.setFocusable(true);
+                }
+                if (!this.isFocusOwner()) {
+                    this.requestFocusInWindow();
+                }
+            }
+
+            StopPanel() {
+                GridBagLayout gbl = new GridBagLayout();
+                GridBagConstraints gbc = new GridBagConstraints();
+                this.setLayout(gbl);
+
+                // 暂停面板标题
+                gbc.fill = GridBagConstraints.HORIZONTAL;
+                gbc.gridx = gbc.gridy = 0;
+                gbc.gridwidth = gbc.gridheight = 1;
+                gbc.weightx = gbc.weighty = 0.5;
+                JLabel title = new JLabel("暂停", JLabel.CENTER);
+                title.setFont(new Font("宋体", Font.BOLD, 35));
+                this.add(title);
+                gbl.setConstraints(title, gbc);
+
+                // 添加按钮
+                for (String name : buttonName) {
+                    gbc.gridy++;
+                    gbc.insets = new Insets(0, 100, 5, 100);
+                    JButton button = new JButton(name);
+                    button.setFont(new Font("黑体", Font.BOLD, 28));
+                    button.setSize(200, 70);
+                    button.setBackground(new Color(65, 105, 225));
+                    button.setForeground(Color.WHITE);
+                    this.add(button);
+                    gbl.setConstraints(button, gbc);
+
+                    if (name.equals("返回游戏")) {
+                        button.addActionListener(new ActionListener() {
+                            @Override
+                            public void actionPerformed(ActionEvent e) {
+                                // 切换键盘焦点
+                                gamePanel.getFocused();
+                                // 隐藏面板
+                                stopPanel.setVisible(false);
+                                // 更改游戏状态
+                                GameWin.status = Status.InGame;
+                                // 更改按钮状态
+                                settingsButton.setText("暂停");
+                            }
+                        });
+                    } else if (name.equals("查看帮助")) {
+
+                    } else if (name.equals("设置")) {
+
+                    } else if (name.equals("返回主菜单")) {
+                        button.addActionListener(new ActionListener() {
+                            @Override
+                            public void actionPerformed(ActionEvent e) {
+                                // 隐藏暂停面板
+                                stopPanel.setVisible(false);
+                                // 更改游戏状态
+                                GameWin.status = Status.Waiting;
+                                // 切换页面
+                                cardLayout.show(container, "menu");
+                            }
+                        });
+                    }
+                }
+
+                // 设置键盘监听
+                this.addKeyListener(new KeyListener() {
+                    @Override
+                    public void keyTyped(KeyEvent e) {
+                    }
+
+                    @Override
+                    public void keyPressed(KeyEvent e) {
+                    }
+
+                    @Override
+                    public void keyReleased(KeyEvent e) {
+                        // ESC：返回游戏
+                        if (e.getKeyCode() == KeyEvent.VK_ESCAPE) {
+                            // 切换键盘焦点
+                            gamePanel.getFocused();
+                            // 隐藏面板
+                            stopPanel.setVisible(false);
+                            // 更改游戏状态
+                            GameWin.status = Status.InGame;
+                            // 更改按钮状态
+                            settingsButton.setText("暂停");
+                        }
+                    }
+                });
+
+                this.setVisible(false);
+                this.setSize(400, 500);
+                this.setLocation(300, 150);
+                this.setBackground(new Color(128, 138, 135));
+            }
+
+        }
+
+        public class PlayerInfoPanel extends JPanel {
+
+        }
     }
 
 }

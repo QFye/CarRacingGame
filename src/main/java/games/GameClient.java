@@ -115,7 +115,7 @@ public class GameClient implements Runnable {
                 panel.userList.put(userInfo.getId(), userInfo);
 
                 // 当处于游戏中时，不断执行
-                while (GameWin.status == Status.InGame) {
+                while (GameWin.status != Status.Waiting) {
 
                     // 重绘
                     panel.repaint();
@@ -148,9 +148,18 @@ public class GameClient implements Runnable {
                     }
 
                     // 判断是否达到胜利条件（随便写的，后面会改）
-                    if (panel.myCar.gety() < -100) {
+                    if (panel.myCar.gety() <= 200 && GameWin.status != Status.Suceeded) {
+                        // 更改状态
                         GameWin.status = Status.Suceeded;
+                        // 客户端显示
                         System.out.println("You win");
+                        JOptionPane.showMessageDialog(null, "恭喜您到达了终点", "消息提示", JOptionPane.INFORMATION_MESSAGE);
+                        // 将胜利信息发送给服务器
+                        DataOutputStream outputStream = new DataOutputStream(socket.getOutputStream());
+                        JSONObject data = new JSONObject();
+                        data.put("type", "msg");
+                        data.put("content", "玩家 " + userInfo.getName() + " 到达了终点");
+                        outputStream.writeUTF(data.toString());
                     }
 
                     // 线程休眠
@@ -161,7 +170,7 @@ public class GameClient implements Runnable {
                     }
                 }
 
-                // 结束后关闭流和套接字
+                // 结束后关闭套接字
                 socket.close();
             }
 
@@ -188,7 +197,7 @@ public class GameClient implements Runnable {
         public synchronized void run() {
             try {
                 // 从服务端读取数据
-                while (GameWin.status == Status.InGame) {
+                while (GameWin.status != Status.Waiting) {
                     inputStream = new DataInputStream(socket.getInputStream());
                     String json = inputStream.readUTF();
                     JSONObject data = JSONObject.fromObject(json);
@@ -230,13 +239,7 @@ public class GameClient implements Runnable {
         public synchronized void run() {
             try {
                 System.out.println("客户端：心跳包线程已启动");
-                while (true) {
-                    // 每间隔10s生成一个心跳包对象并发送给服务器
-                    try {
-                        Thread.sleep(10000);
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
+                while (GameWin.status != Status.Waiting) {
                     System.out.println("客户端：发送心跳包");
                     // 写入心跳包信息
                     outputStream = new DataOutputStream(socket.getOutputStream());
@@ -245,7 +248,14 @@ public class GameClient implements Runnable {
                     data.put("from", from);
                     outputStream.writeUTF(data.toString());
                     outputStream.flush();
+                    // 每间隔7s生成一个心跳包对象并发送给服务器
+                    try {
+                        Thread.sleep(7000);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
                 }
+                System.out.println("客户端：心跳包正常退出");
             } catch (IOException e) {
                 e.printStackTrace();
                 // 异常处理
