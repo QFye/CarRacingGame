@@ -18,6 +18,7 @@ public class GameClient implements Runnable {
     private DataInputStream inputStream;
     private GamePanel panel;// 与面板交互数据
     private User userInfo;// 客户端用户信息
+    private boolean start = false;
 
     GameClient(GamePanel panel) {
         this.panel = panel;
@@ -47,22 +48,24 @@ public class GameClient implements Runnable {
                     String json = inputStream.readUTF();
                     JSONObject data = JSONObject.fromObject(json);
                     if (data.getString("type").equals("myInfo")) {
+
                         // 接收成功则更新本地用户信息
                         userInfo = new User();
                         userInfo.setName(data.getString("name"));
                         userInfo.setAttribute(null, data.getInt("id"), data.getDouble("x"), data.getDouble("y"),
-                                data.getDouble("dir"), data.getString("imgPath"));
-                        // System.out.println(
-                        // "客户端：id = " + userInfo.getId() + ",x = " + userInfo.getX() + ",y = " +
-                        // userInfo.getY());
+                                data.getDouble("dir"), data.getString("imgPath"), data.getBoolean("online"),
+                                data.getBoolean("ready"));
                         success = true;
+
                     } else if (data.getString("type").equals("reject")) {
-                        // 提示用户更改名称
-                        JOptionPane.showMessageDialog(null, data.getString("reason"), "消息提示",
+
+                        // 提示用户失败原因
+                        JOptionPane.showMessageDialog(panel, data.getString("reason"), "消息提示",
                                 JOptionPane.INFORMATION_MESSAGE);
                         // 更换面板
                         panel.getCardLayout().show(panel.getGameWinContainer(), "menu");
                         return;
+
                     }
                 } catch (Exception e) {
                     success = false;
@@ -147,19 +150,36 @@ public class GameClient implements Runnable {
 
                     }
 
-                    // 判断是否达到胜利条件（随便写的，后面会改）
-                    if (panel.myCar.gety() <= 200 && GameWin.status != Status.Suceeded) {
-                        // 更改状态
-                        GameWin.status = Status.Suceeded;
-                        // 客户端显示
-                        System.out.println("You win");
-                        JOptionPane.showMessageDialog(null, "恭喜您到达了终点", "消息提示", JOptionPane.INFORMATION_MESSAGE);
-                        // 将胜利信息发送给服务器
-                        DataOutputStream outputStream = new DataOutputStream(socket.getOutputStream());
-                        JSONObject data = new JSONObject();
-                        data.put("type", "msg");
-                        data.put("content", "玩家 " + userInfo.getName() + " 到达了终点");
-                        outputStream.writeUTF(data.toString());
+                    if (start) {
+
+                        // 判断是否达到胜利条件（随便写的，后面会改）
+                        if (panel.myCar.gety() <= 200 && GameWin.status != Status.Suceeded) {
+                            // 更改状态
+                            GameWin.status = Status.Suceeded;
+                            // 客户端显示
+                            System.out.println("You win");
+                            JOptionPane.showMessageDialog(null, "恭喜您到达了终点", "消息提示", JOptionPane.INFORMATION_MESSAGE);
+                            // 将胜利信息发送给服务器
+                            DataOutputStream outputStream = new DataOutputStream(socket.getOutputStream());
+                            JSONObject data = new JSONObject();
+                            data.put("type", "msg");
+                            data.put("content", "玩家 " + userInfo.getName() + " 到达了终点");
+                            outputStream.writeUTF(data.toString());
+                        }
+
+                    } else {
+
+                        // 判断是否更改准备状态
+                        if (panel.isReadyStatusChanged()) {
+                            DataOutputStream outputStream = new DataOutputStream(socket.getOutputStream());
+                            JSONObject data = new JSONObject();
+                            data.put("type", "ready");
+                            data.put("name", userInfo.getName());
+                            outputStream.writeUTF(data.toString());
+                            userInfo.setReady(!userInfo.isReady());
+                            panel.setReadyStatusChanged(false);
+                        }
+
                     }
 
                     // 线程休眠
@@ -203,18 +223,24 @@ public class GameClient implements Runnable {
                     JSONObject data = JSONObject.fromObject(json);
 
                     if (data.getString("type").equals("user")) {
+
                         // 接收玩家信息
                         User user = new User();
                         user.setName(data.getString("name"));
                         user.setAttribute(null, data.getInt("id"), data.getDouble("x"), data.getDouble("y"),
-                                data.getDouble("dir"), data.getString("imgPath"));
+                                data.getDouble("dir"), data.getString("imgPath"), data.getBoolean("online"),
+                                data.getBoolean("ready"));
                         panel.userList.put(user.getId(), user);
+                        panel.updatePlayerInfoPanel(user.getId());
+
                     } else if (data.getString("type").equals("msg")) {
+
                         // 接收消息类信息
                         panel.chatPane.appendMsg(new Date() + "<br>" + data.getString("content"));
                         if (data.containsKey("concurrent")) {
                             panel.chatPane.appendMsg(new Date() + "<br>服务器在线人数：" + data.getInt("concurrent"));
                         }
+
                     }
                 }
 

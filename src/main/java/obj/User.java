@@ -13,6 +13,7 @@ public class User {
     private String imgPath;
     private Socket socket;
     private boolean online;
+    private boolean ready;
 
     // 获取图像中心的x坐标
     public double getCenterX() {
@@ -58,14 +59,16 @@ public class User {
         this.name = name;
     }
 
-    public void setAttribute(Socket socket, int id, double x, double y, double dir, String imgPath) {
+    public void setAttribute(Socket socket, int id, double x, double y, double dir, String imgPath, boolean online,
+            boolean ready) {
         this.socket = socket;
         this.id = id;
         this.x = x;
         this.y = y;
         this.dir = dir;
         this.imgPath = imgPath;
-        this.online = true;
+        this.online = online;
+        this.ready = ready;
     }
 
     public void update(double x, double y, double dir) {
@@ -114,6 +117,14 @@ public class User {
         this.online = status;
     }
 
+    public boolean isReady() {
+        return ready;
+    }
+
+    public void setReady(boolean ready) {
+        this.ready = ready;
+    }
+
     public void writeInData(JSONObject data) {
         data.put("name", name);
         data.put("id", id);
@@ -121,5 +132,15 @@ public class User {
         data.put("y", y);
         data.put("dir", dir);
         data.put("imgPath", imgPath);
+        data.put("ready", ready);
+        data.put("online", online);
+    }
+
+    public User(int id) {
+        this.id = id;
+    }
+
+    public User() {
+
     }
 }

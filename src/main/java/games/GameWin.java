@@ -199,6 +199,18 @@ public class GameWin extends JFrame {
         public ChatPane chatPane = new ChatPane();
         private StopPanel stopPanel = new StopPanel();
         private int originX = 0, originY = -2200;// 长地图的相对原点坐标（设地图左上角为原点）
+        private boolean readyStatusChanged = false;
+        public TreeMap<Integer, PlayerInfoPanel> playerInfos = new TreeMap<>();
+
+        public void updatePlayerInfoPanel(Integer i) {
+            if (!playerInfos.get(i).isVisible()) {
+                PlayerInfoPanel playerInfoPanel = new PlayerInfoPanel(userList.get(i));
+                playerInfos.put(i, playerInfoPanel);
+                this.add(playerInfoPanel);
+                playerInfos.get(i).setVisible(true);
+                System.out.println("更新玩家 " + userList.get(i).getName() + " 的信息面板");
+            }
+        }
 
         public String getPlayerName() {
             return playerName;
@@ -210,6 +222,14 @@ public class GameWin extends JFrame {
 
         public Container getGameWinContainer() {
             return container;
+        }
+
+        public boolean isReadyStatusChanged() {
+            return readyStatusChanged;
+        }
+
+        public void setReadyStatusChanged(boolean readyStatusChanged) {
+            this.readyStatusChanged = readyStatusChanged;
         }
 
         public void getFocused() {
@@ -263,6 +283,13 @@ public class GameWin extends JFrame {
             // 增加暂停面板
             this.add(stopPanel, JLayeredPane.DRAG_LAYER);
 
+            // 初始化玩家信息界面
+            for (int i = 1; i <= 5; i++) {
+                playerInfos.put(i, new PlayerInfoPanel(new User(i)));
+                playerInfos.get(i).setVisible(false);
+                this.add(playerInfos.get(i), JLayeredPane.MODAL_LAYER);
+            }
+
             // 键盘监听
             this.addKeyListener(new KeyListener() {
                 Boolean up = false, down = false, left = false, right = false;
@@ -290,6 +317,10 @@ public class GameWin extends JFrame {
                     // 用T键控制聊天面板的显示
                     if (e.getKeyChar() == 't') {
                         chatPane.setVisible(!chatPane.isVisible());
+                    }
+                    // 用P键更改准备状态
+                    if (e.getKeyChar() == 'p') {
+                        setReadyStatusChanged(true);
                     }
                 }
 
@@ -403,9 +434,7 @@ public class GameWin extends JFrame {
             // 绘制汽车
             Graphics2D g2d = (Graphics2D) g;
             userList.forEach((id, user) -> {
-                // System.out.println("width = " + user.getBoxWidth() + ", Height = " +
-                // user.getBoxHeight() + ", x = "
-                // + user.getCenterX() + ", y = " + user.getCenterY());
+
                 // 旋转画笔
                 g2d.rotate(Math.toRadians(user.getDir()), user.getX() + originX + (GameUtils.CarWidth >> 1),
                         user.getY() + originY + (GameUtils.CarHeight >> 1));
@@ -415,6 +444,7 @@ public class GameWin extends JFrame {
                 // 回溯画笔角度
                 g2d.rotate(-Math.toRadians(user.getDir()), user.getX() + originX + (GameUtils.CarWidth >> 1),
                         user.getY() + originY + (GameUtils.CarHeight >> 1));
+
                 // 绘制用户名
                 if (user.getName() != null) {
                     // 抗锯齿
@@ -436,6 +466,7 @@ public class GameWin extends JFrame {
                             (float) user.getX() + originX + (GameUtils.CarWidth - textWidth >> 1),
                             (float) user.getY() + originY - 10);
                 }
+
             });
         }
 
@@ -637,7 +668,31 @@ public class GameWin extends JFrame {
         }
 
         public class PlayerInfoPanel extends JPanel {
+            private User userInfo;
+            private JLabel statusLabel;
 
+            PlayerInfoPanel(User userInfo) {
+                this.userInfo = userInfo;
+
+                this.setLayout(null);
+                this.setSize(180, 100);
+
+                // 添加玩家名称
+                JLabel playerName = new JLabel(userInfo.getName(), JLabel.CENTER);
+                playerName.setSize(180, 40);
+                playerName.setLocation(0, 20);
+                playerName.setFont(new Font("宋体", Font.BOLD, 35));
+                this.add(playerName);
+
+                // 添加玩家状态信息
+                statusLabel = new JLabel("玩家状态：未准备", JLabel.CENTER);
+                statusLabel.setSize(120, 40);
+                statusLabel.setLocation(0, 50);
+                this.add(statusLabel);
+
+                this.setBackground(new Color(135, 206, 235));
+                this.setLocation(820, 120 * userInfo.getId() - 20);
+            }
         }
     }
 

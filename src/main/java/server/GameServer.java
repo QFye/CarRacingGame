@@ -13,6 +13,8 @@ public class GameServer {
     public TreeMap<String, User> userList = new TreeMap<>();
     // 在线用户列表
     public ArrayList<String> onlineList = new ArrayList<>();
+    // 准备列表
+    public TreeMap<String, Boolean> isReady = new TreeMap<>();
 
     public static void main(String[] args) {
         new GameServer();
@@ -35,7 +37,8 @@ public class GameServer {
 
                 // 将当前用户信息加入列表中
                 if (apply.getString("type").equals("apply")) {
-                    // 检测是否重名，若重名，则反馈客户端
+
+                    // 检测是否达到服务器人数上限
                     if (userList.size() >= 5) {
                         DataOutputStream outputStream = new DataOutputStream(socket.getOutputStream());
                         JSONObject reject = new JSONObject();
@@ -44,49 +47,68 @@ public class GameServer {
                         outputStream.writeUTF(reject.toString());
                     } else {
                         User newUser = new User();
+                        boolean success = true;
+                        // 检测重名
                         if (userList.containsKey(apply.getString("username"))) {
                             newUser = userList.get(apply.getString("username"));
-                            newUser.setOnline(true);
-                            newUser.setSocket(socket);
-                            onlineList.add(newUser.getName());
+                            // 判断是否在线
+                            if (newUser.isOnline()) {
+                                // 将登录失败信息反馈给客户端
+                                DataOutputStream outputStream = new DataOutputStream(socket.getOutputStream());
+                                JSONObject reject = new JSONObject();
+                                reject.put("type", "reject");
+                                reject.put("reason", "该玩家已进入服务器，登录失败");
+                                outputStream.writeUTF(reject.toString());
+                                success = false;
+                            } else {
+                                // 添加在线信息
+                                newUser.setOnline(true);
+                                newUser.setSocket(socket);
+                                onlineList.add(newUser.getName());
+                                isReady.put(newUser.getName(), false);
+                            }
                         } else {
                             // 分配用户信息（id和汽车位置等）
                             int currentUser = userList.size();
                             newUser.setName(apply.getString("username"));
                             newUser.setAttribute(socket, currentUser + 1, 120 + (currentUser + 1) * 120, 2800, 0,
-                                    GameUtils.getCarPathString(currentUser + 1));
+                                    GameUtils.getCarPathString(currentUser + 1), true, false);
                             userList.put(newUser.getName(), newUser);
+                            isReady.put(newUser.getName(), false);
                             onlineList.add(newUser.getName());
                         }
 
-                        // 向客户端发送当前玩家信息
-                        DataOutputStream curOutputStream = new DataOutputStream(socket.getOutputStream());
-                        JSONObject myData = new JSONObject();
-                        myData.put("type", "myInfo");
-                        newUser.writeInData(myData);
-                        curOutputStream.writeUTF(myData.toString());
-                        curOutputStream.flush();
+                        if (success) {
 
-                        // 连接成功后创建服务器端线程
-                        new Thread(new ServerThread(newUser)).start();
+                            // 向客户端发送当前玩家信息
+                            DataOutputStream curOutputStream = new DataOutputStream(socket.getOutputStream());
+                            JSONObject myData = new JSONObject();
+                            myData.put("type", "myInfo");
+                            newUser.writeInData(myData);
+                            curOutputStream.writeUTF(myData.toString());
+                            curOutputStream.flush();
 
-                        // 向所有客户端发送玩家上线信息及游戏人数
-                        userList.forEach((name, user) -> {
-                            if (user.isOnline()) {
-                                try {
-                                    DataOutputStream outputStream = new DataOutputStream(
-                                            user.getSocket().getOutputStream());
-                                    JSONObject data = new JSONObject();
-                                    data.put("type", "msg");
-                                    data.put("content", "玩家 " + name + " 加入服务器");
-                                    data.put("concurrent", onlineList.size());
-                                    outputStream.writeUTF(data.toString());
-                                    outputStream.flush();
-                                } catch (Exception e) {
-                                    e.printStackTrace();
+                            // 连接成功后创建服务器端线程
+                            new Thread(new ServerThread(newUser)).start();
+
+                            // 向所有客户端发送玩家上线信息及游戏人数
+                            userList.forEach((name, user) -> {
+                                if (user.isOnline()) {
+                                    try {
+                                        DataOutputStream outputStream = new DataOutputStream(
+                                                user.getSocket().getOutputStream());
+                                        JSONObject data = new JSONObject();
+                                        data.put("type", "msg");
+                                        data.put("content", "玩家 " + name + " 加入服务器");
+                                        data.put("concurrent", onlineList.size());
+                                        outputStream.writeUTF(data.toString());
+                                        outputStream.flush();
+                                    } catch (Exception e) {
+                                        e.printStackTrace();
+                                    }
                                 }
-                            }
-                        });
+                            });
+                        }
                     }
                 }
 
@@ -165,13 +187,14 @@ public class GameServer {
                                 }
                             }
                         });
-                    } else {
+                    } else if (data.getString("type").equals("user")) {
                         // 处理用户信息及聊天信息
                         // 创建临时变量
                         User cur = userList.get(data.getString("name")), update = new User();
                         update.setName(cur.getName());
                         update.setAttribute(cur.getSocket(), cur.getId(), data.getDouble("x"), data.getDouble("y"),
-                                data.getDouble("dir"), cur.getImgPath());
+                                data.getDouble("dir"), cur.getImgPath(), data.getBoolean("online"),
+                                data.getBoolean("ready"));
                         // 判断是否碰撞
                         boolean isCollide = false;
                         Iterator<User> it = userList.values().iterator();
@@ -225,6 +248,31 @@ public class GameServer {
                                 });
                             }
                         }
+                    } else if (data.getString("type").equals("ready")) {
+
+                        // 更改准备状态
+                        String curName = data.getString("name");
+                        isReady.put(curName, !isReady.get(curName));
+                        String content = "玩家 " + curName + (isReady.get(curName) ? " 已准备就绪" : " 取消了准备");
+
+                        // 向其他用户发送消息
+                        userList.forEach((name, user) -> {
+                            // 判断是否在线
+                            if (user.isOnline()) {
+                                try {
+                                    // 向在线用户发送断连消息
+                                    DataOutputStream outputStream = new DataOutputStream(
+                                            user.getSocket().getOutputStream());
+                                    JSONObject msg = new JSONObject();
+                                    msg.put("type", "msg");
+                                    msg.put("content", content);
+                                    outputStream.writeUTF(msg.toString());
+                                    outputStream.flush();
+                                } catch (Exception e2) {
+                                    e2.printStackTrace();
+                                }
+                            }
+                        });
                     }
 
                     // 线程休眠
