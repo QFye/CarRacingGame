@@ -193,8 +193,8 @@ public class GameWin extends JFrame {
 
     // 面板三：游戏面板
     public class GamePanel extends JLayeredPane {
-        public Car myCar;
-        public TreeMap<Integer, User> userList = new TreeMap<>();
+        public MyCar myCar;
+        public TreeMap<Integer, GameObj> objectList = new TreeMap<>();
         public JButton settingsButton;
         public ChatPane chatPane = new ChatPane();
         private StopPanel stopPanel = new StopPanel();
@@ -238,11 +238,10 @@ public class GameWin extends JFrame {
 
         public void updatePlayerInfoPanel(Integer i) {
             if (!playerInfos.get(i).isVisible()) {
-                PlayerInfoPanel playerInfoPanel = new PlayerInfoPanel(userList.get(i));
+                PlayerInfoPanel playerInfoPanel = new PlayerInfoPanel((Car) objectList.get(i));
                 playerInfos.put(i, playerInfoPanel);
                 this.add(playerInfoPanel);
                 playerInfos.get(i).setVisible(true);
-                System.out.println("更新玩家 " + userList.get(i).getName() + " 的信息面板");
             }
         }
 
@@ -278,10 +277,14 @@ public class GameWin extends JFrame {
         public void launch() {
             // 生成myCar
             if (myCar == null) {
-                this.myCar = new Car();
+                this.myCar = new MyCar();
                 myCar.setAttribute(1, 240, 2800, 0, GameUtils.getCarPathString(1), GameUtils.CarWidth,
                         GameUtils.CarHeight);
             }
+            objectList.put(6, new Barrier(6, 300, 2000, 80, 30));
+            objectList.put(7, new Barrier(7, 460, 1300, 80, 30));
+            objectList.put(8, new Barrier(8, 200, 2300, 80, 30));
+            objectList.put(9, new Barrier(9, 640, 600, 80, 30));
             this.setLayout(null);
 
             // 设置暂停/继续按钮
@@ -319,7 +322,7 @@ public class GameWin extends JFrame {
 
             // 初始化玩家信息界面
             for (int i = 1; i <= 5; i++) {
-                playerInfos.put(i, new PlayerInfoPanel(new User(i)));
+                playerInfos.put(i, new PlayerInfoPanel(new Car(i)));
                 playerInfos.get(i).setVisible(false);
                 this.add(playerInfos.get(i), JLayeredPane.MODAL_LAYER);
             }
@@ -356,7 +359,7 @@ public class GameWin extends JFrame {
                     if (e.getKeyChar() == 'p') {
                         setReadyStatusChanged(true);
                         playerInfos.forEach((id, panel) -> {
-                            if (panel.getUserInfo().getId() == myCar.getid()) {
+                            if (panel.getUserInfo().getId() == myCar.getId()) {
                                 String status = panel.getButtonText() == "准备" ? "取消" : "准备";
                                 panel.setButtonText(status);
                             }
@@ -468,7 +471,7 @@ public class GameWin extends JFrame {
         public void paintComponent(Graphics g) {
             // 更新汽车信息
             if (GameWin.status == Status.InGame || GameWin.status == Status.Suspend)
-                myCar.update(userList);
+                myCar.update(objectList);
             // 更新原点坐标（移动背景图片来实现汽车的移动效果）
             if (myCar.gety() > 500 && myCar.gety() < 2500) {
                 originY = 300 - (int) myCar.gety();
@@ -477,45 +480,51 @@ public class GameWin extends JFrame {
             g.drawImage(GameUtils.getBgImg(), originX, originY, 1000, 3000, this);
             // 绘制汽车
             Graphics2D g2d = (Graphics2D) g;
-            userList.forEach((id, user) -> {
+            objectList.forEach((id, obj) -> {
 
+                // System.out.println("(id, x, y) = " + obj.getId() + ", " + obj.getx() + ", " +
+                // obj.gety());
+                // System.out.println("(obj.getx() + originX, obj.getx() + originX +
+                // (obj.getImgWidth() >> 1)) = " +
+                // obj.getx() + originX + ", " + obj.getx() + originX + (obj.getImgWidth() >>
+                // 1));
                 // 旋转画笔
-                g2d.rotate(Math.toRadians(user.getDir()), user.getX() + originX + (GameUtils.CarWidth >> 1),
-                        user.getY() + originY + (GameUtils.CarHeight >> 1));
+                g2d.rotate(Math.toRadians(obj.getDir()), obj.getx() + originX + (obj.getImgWidth() >> 1),
+                        obj.gety() + originY + (obj.getImgHeight() >> 1));
                 // 绘制图片
-                g2d.drawImage(GameUtils.getObjImg(user.getImgPath()), (int) user.getX() + originX,
-                        (int) user.getY() + originY, GameUtils.CarWidth, GameUtils.CarHeight, this);
+                g2d.drawImage(GameUtils.getObjImg(obj.getImgPath()), (int) obj.getx() + originX,
+                        (int) obj.gety() + originY, obj.getImgWidth(), obj.getImgHeight(), this);
                 // 回溯画笔角度
-                g2d.rotate(-Math.toRadians(user.getDir()), user.getX() + originX + (GameUtils.CarWidth >> 1),
-                        user.getY() + originY + (GameUtils.CarHeight >> 1));
+                g2d.rotate(-Math.toRadians(obj.getDir()), obj.getx() + originX + (obj.getImgWidth() >> 1),
+                        obj.gety() + originY + (obj.getImgHeight() >> 1));
                 if (showCollisionVolumn) {
-                    // 绘制碰撞体积（会丢失精度）
+                    // 绘制碰撞箱
                     g2d.drawImage(GameUtils.getCollisionDisplayerImg(),
-                            (int) (user.getCenterX() + originX - user.getBoxWidth() / 2),
-                            (int) (user.getCenterY() + originY - user.getBoxHeight() / 2), (int) user.getBoxWidth(),
-                            (int) user.getBoxHeight(), this);
+                            (int) (obj.getCenterX() + originX - obj.getBoxWidth() / 2),
+                            (int) (obj.getCenterY() + originY - obj.getBoxHeight() / 2), (int) obj.getBoxWidth(),
+                            (int) obj.getBoxHeight(), this);
                 }
 
                 // 绘制用户名
-                if (user.getName() != null) {
+                if (obj.getName() != null) {
                     // 抗锯齿
                     g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
                     // 设置字体
                     Font font = new Font("黑体", Font.PLAIN, 18);
                     g2d.setFont(font);
                     // 设置颜色
-                    if (user.getName().equals(playerName)) {
+                    if (obj.getName().equals(playerName)) {
                         g2d.setColor(Color.BLUE);
                     } else {
                         g2d.setColor(Color.BLACK);
                     }
                     // 获取字符串长度
                     FontMetrics fm = g2d.getFontMetrics(font);
-                    int textWidth = fm.stringWidth(user.getName());
+                    int textWidth = fm.stringWidth(obj.getName());
                     // 绘制字符串
-                    g2d.drawString(user.getName(),
-                            (float) user.getX() + originX + (GameUtils.CarWidth - textWidth >> 1),
-                            (float) user.getY() + originY - 10);
+                    g2d.drawString(obj.getName(),
+                            (float) obj.getx() + originX + (obj.getImgWidth() - textWidth >> 1),
+                            (float) obj.gety() + originY - 10);
                 }
 
             });
@@ -719,11 +728,11 @@ public class GameWin extends JFrame {
         }
 
         public class PlayerInfoPanel extends JPanel {
-            private User userInfo;
+            private Car userInfo;
             private JLabel statusLabel;
             private JButton preparedButton;
 
-            public User getUserInfo() {
+            public Car getUserInfo() {
                 return userInfo;
             }
 
@@ -740,7 +749,7 @@ public class GameWin extends JFrame {
                 return preparedButton.getText();
             }
 
-            PlayerInfoPanel(User userInfo) {
+            PlayerInfoPanel(Car userInfo) {
                 this.userInfo = userInfo;
 
                 this.setLayout(null);
@@ -777,7 +786,7 @@ public class GameWin extends JFrame {
                     public void actionPerformed(ActionEvent e) {
                         setReadyStatusChanged(true);
                         playerInfos.forEach((id, panel) -> {
-                            if (panel.getUserInfo().getId() == myCar.getid()) {
+                            if (panel.getUserInfo().getId() == myCar.getId()) {
                                 String status = panel.getButtonText() == "准备" ? "取消" : "准备";
                                 panel.setButtonText(status);
                             }
@@ -785,7 +794,7 @@ public class GameWin extends JFrame {
                     }
                 });
                 this.add(preparedButton);
-                if (userInfo.getId() != myCar.getid()) {
+                if (userInfo.getId() != myCar.getId()) {
                     preparedButton.setVisible(false);
                 }
 

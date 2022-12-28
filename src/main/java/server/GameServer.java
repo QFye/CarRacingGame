@@ -10,7 +10,7 @@ import utils.GameUtils;
 public class GameServer {
 
     // 用户列表
-    public TreeMap<String, User> userList = new TreeMap<>();
+    public TreeMap<String, Car> userList = new TreeMap<>();
     // 在线用户列表
     public ArrayList<String> onlineList = new ArrayList<>();
     // 游戏是否开始
@@ -53,7 +53,7 @@ public class GameServer {
                         reject.put("reason", "游戏已开始");
                         outputStream.writeUTF(reject.toString());
                     } else {
-                        User newUser = new User();
+                        Car newUser = new Car();
                         boolean success = true;
                         // 检测重名
                         if (userList.containsKey(apply.getString("username"))) {
@@ -157,9 +157,9 @@ public class GameServer {
     class ServerThread implements Runnable {
 
         // 线程对应用户
-        private User curUser;
+        private Car curUser;
 
-        public ServerThread(User curUser) {
+        public ServerThread(Car curUser) {
             this.curUser = curUser;
         }
 
@@ -197,29 +197,6 @@ public class GameServer {
                         });
                     } else if (data.getString("type").equals("user")) {
                         // 处理用户信息及聊天信息
-                        // // 创建临时变量
-                        // User cur = userList.get(data.getString("name")), update = new User();
-                        // update.setName(cur.getName());
-                        // update.setAttribute(cur.getSocket(), cur.getId(), data.getDouble("x"),
-                        // data.getDouble("y"),
-                        // data.getDouble("dir"), cur.getImgPath(), data.getBoolean("online"),
-                        // data.getBoolean("ready"));
-                        // // 判断是否碰撞
-                        // boolean isCollide = false;
-                        // Iterator<User> it = userList.values().iterator();
-                        // while (it.hasNext()) {
-                        // User ne = it.next();
-                        // if (!ne.getName().equals(cur.getName())) {
-                        // if (update.isCollidingWith(ne)) {
-                        // isCollide = true;
-                        // }
-                        // }
-                        // }
-                        // // 若不碰撞则将临时变量存入列表中
-                        // if (!isCollide)
-                        // userList.put(update.getName(), update);
-                        // else
-                        // System.out.println("crush");
                         // 向每个客户端发送数据
                         for (int i = 0; i < onlineList.size(); i++) {
                             // 不在线则跳过
@@ -228,15 +205,12 @@ public class GameServer {
                             try {
                                 DataOutputStream outputStream = new DataOutputStream(userList.get(
                                         onlineList.get(i)).getSocket().getOutputStream());
-                                // JSONObject outjson = new JSONObject();
-                                // outjson.put("type", "user");
-                                // cur.writeInData(outjson);
                                 outputStream.writeUTF(json);
                                 outputStream.flush();
                             } catch (Exception e) {
-                                // 固定发送消息（lambda体内只能引用外部常量）
-                                final String content = "玩家 " + onlineList.get(i) + " 断开连接";
-                                final int id = userList.get(onlineList.get(i)).getId();
+                                // 固定发送消息
+                                String content = "玩家 " + onlineList.get(i) + " 断开连接";
+                                int id = userList.get(onlineList.get(i)).getId();
                                 // 更改用户连接状态
                                 userList.get(onlineList.get(i)).setOnline(false);
                                 onlineList.remove(i);
@@ -293,9 +267,9 @@ public class GameServer {
 
                         // 判断游戏是否开始
                         int preparedCount = 0;
-                        Iterator<User> it = userList.values().iterator();
+                        Iterator<Car> it = userList.values().iterator();
                         while (it.hasNext()) {
-                            User user = it.next();
+                            Car user = it.next();
                             if (user.isReady()) {
                                 preparedCount++;
                             }

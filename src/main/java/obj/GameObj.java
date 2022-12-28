@@ -2,18 +2,14 @@ package obj;
 
 import javax.swing.*;
 
-public class GameObj extends JComponent {
+public abstract class GameObj extends JComponent {
 
     protected int id;// 物品id
     protected double x, y, dir;// x,y坐标、方向角（与y轴负方向夹角）
     protected String ImgPath;// 图像路径
     protected int ImgWidth, ImgHeight;// 图像长宽
 
-    public boolean isInfoObj() {
-        return dir == -1;
-    }
-
-    public int getid() {
+    public int getId() {
         return id;
     }
 
@@ -50,5 +46,27 @@ public class GameObj extends JComponent {
         this.ImgWidth = ImgWidth;
         this.ImgHeight = ImgHeight;
     }
+
+    GameObj(int id, double x, double y, double dir, String ImgPath, int ImgWidth, int ImgHeight) {
+        this.id = id;
+        this.x = x;
+        this.y = y;
+        this.dir = dir;
+        this.ImgPath = ImgPath;
+        this.ImgWidth = ImgWidth;
+        this.ImgHeight = ImgHeight;
+    }
+
+    // 获取图像中心的x坐标
+    abstract public double getCenterX();
+
+    // 获取图像中心的y坐标
+    abstract public double getCenterY();
+
+    // 获取碰撞体积的width
+    abstract public double getBoxWidth();
+
+    // 获取碰撞体积的height
+    abstract public double getBoxHeight();
 
 }

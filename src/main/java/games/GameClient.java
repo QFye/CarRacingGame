@@ -17,7 +17,7 @@ public class GameClient implements Runnable {
     private DataOutputStream outputStream;
     private DataInputStream inputStream;
     private GamePanel panel;// 与面板交互数据
-    private User userInfo;// 客户端用户信息
+    private Car userInfo;// 客户端用户信息
     private boolean start = false;
 
     GameClient(GamePanel panel) {
@@ -50,7 +50,7 @@ public class GameClient implements Runnable {
                     if (data.getString("type").equals("myInfo")) {
 
                         // 接收成功则更新本地用户信息
-                        userInfo = new User();
+                        userInfo = new Car();
                         userInfo.setName(data.getString("name"));
                         userInfo.setAttribute(null, data.getInt("id"), data.getDouble("x"), data.getDouble("y"),
                                 data.getDouble("dir"), data.getString("imgPath"), data.getBoolean("online"),
@@ -112,10 +112,10 @@ public class GameClient implements Runnable {
             if (connectionState) {
 
                 // 利用接收的用户初始信息更新myCar的位置和id
-                panel.myCar.setPosition(userInfo.getX(), userInfo.getY());
+                panel.myCar.setPosition(userInfo.getx(), userInfo.gety());
                 panel.myCar.setDir(userInfo.getDir());
                 panel.myCar.setid(userInfo.getId());
-                panel.userList.put(userInfo.getId(), userInfo);
+                panel.objectList.put(userInfo.getId(), userInfo);
 
                 // 当处于游戏中时，不断执行
                 while (GameWin.status != Status.Waiting) {
@@ -225,13 +225,15 @@ public class GameClient implements Runnable {
                     if (data.getString("type").equals("user")) {
 
                         // 接收玩家信息
-                        User user = new User();
+                        Car user = new Car();
                         user.setName(data.getString("name"));
                         user.setAttribute(null, data.getInt("id"), data.getDouble("x"), data.getDouble("y"),
                                 data.getDouble("dir"), data.getString("imgPath"), data.getBoolean("online"),
                                 data.getBoolean("ready"));
-                        panel.userList.put(user.getId(), user);
+                        panel.objectList.put(user.getId(), user);
                         panel.updatePlayerInfoPanel(user.getId());
+
+                        // System.out.println(user.getId() + ", " + user.getx() + ", " + user.gety());
 
                     } else if (data.getString("type").equals("msg")) {
 
@@ -255,7 +257,7 @@ public class GameClient implements Runnable {
 
                     } else if (data.getString("type").equals("start")) {
                         panel.countDown();
-                        panel.myCar.setPosition(120 + panel.myCar.getid() * 120, 2800);
+                        panel.myCar.setPosition(120 + panel.myCar.getId() * 120, 2800);
                         panel.myCar.setDir(0);
                         panel.myCar.clearSpeed();
                         start = true;

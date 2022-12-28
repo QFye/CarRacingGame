@@ -177,6 +177,13 @@ CAR RACING DEMO
 
 ---
 
+##### $Test\ V0.2.2\ 版本内容更新$
+1. 调整obj目录下的各类，将原Car类更名为MyCar类，原User类更名为Car类，并将GameObj类变为了抽象类，继承关系变为MyCar extends Car extends GameObj，以便于后续添加新的物件
+2. 新增了Barrier障碍物类，现在可以在地图中设置障碍物了
+3. 汽车现在不能开出地图的边界了
+
+---
+
 ## 待更新或修复内容
 1. 添加其他障碍物或道具
 2. 游戏美术素材
