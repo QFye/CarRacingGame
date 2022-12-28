@@ -126,7 +126,7 @@ public class GameClient implements Runnable {
                     // 更新汽车信息并写入userInfo来据此进行通信
                     try {
                         outputStream = new DataOutputStream(socket.getOutputStream());
-                        userInfo.update(panel.myCar.getx(), panel.myCar.gety(), panel.myCar.getDir());
+                        userInfo.updatePosition(panel.myCar.getx(), panel.myCar.gety(), panel.myCar.getDir());
                         JSONObject data = new JSONObject();
                         data.put("type", "user");
                         userInfo.writeInData(data);
@@ -236,11 +236,29 @@ public class GameClient implements Runnable {
                     } else if (data.getString("type").equals("msg")) {
 
                         // 接收消息类信息
+                        // 打印信息
                         panel.chatPane.appendMsg(new Date() + "<br>" + data.getString("content"));
+                        // 更改信息栏状态
+                        if (data.getString("content").contains("加入服务器")) {
+                            panel.playerInfos.get(data.getInt("id")).setStatusText("未准备");
+                        } else if (data.getString("content").contains("准备就绪")) {
+                            panel.playerInfos.get(data.getInt("id")).setStatusText("已准备");
+                        } else if (data.getString("content").contains("取消了准备")) {
+                            panel.playerInfos.get(data.getInt("id")).setStatusText("未准备");
+                        } else if (data.getString("content").contains("断开连接")) {
+                            panel.playerInfos.get(data.getInt("id")).setStatusText("离线");
+                        }
+                        // 打印服务器人数
                         if (data.containsKey("concurrent")) {
                             panel.chatPane.appendMsg(new Date() + "<br>服务器在线人数：" + data.getInt("concurrent"));
                         }
 
+                    } else if (data.getString("type").equals("start")) {
+                        panel.countDown();
+                        panel.myCar.setPosition(120 + panel.myCar.getid() * 120, 2800);
+                        panel.myCar.setDir(0);
+                        panel.myCar.clearSpeed();
+                        start = true;
                     }
                 }
 

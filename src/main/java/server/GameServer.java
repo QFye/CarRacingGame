@@ -13,8 +13,8 @@ public class GameServer {
     public TreeMap<String, User> userList = new TreeMap<>();
     // 在线用户列表
     public ArrayList<String> onlineList = new ArrayList<>();
-    // 准备列表
-    public TreeMap<String, Boolean> isReady = new TreeMap<>();
+    // 游戏是否开始
+    private boolean isStart = false;
 
     public static void main(String[] args) {
         new GameServer();
@@ -45,6 +45,13 @@ public class GameServer {
                         reject.put("type", "reject");
                         reject.put("reason", "服务器人数已达上限");
                         outputStream.writeUTF(reject.toString());
+                        // 检测游戏是否开始
+                    } else if (isStart) {
+                        DataOutputStream outputStream = new DataOutputStream(socket.getOutputStream());
+                        JSONObject reject = new JSONObject();
+                        reject.put("type", "reject");
+                        reject.put("reason", "游戏已开始");
+                        outputStream.writeUTF(reject.toString());
                     } else {
                         User newUser = new User();
                         boolean success = true;
@@ -65,7 +72,6 @@ public class GameServer {
                                 newUser.setOnline(true);
                                 newUser.setSocket(socket);
                                 onlineList.add(newUser.getName());
-                                isReady.put(newUser.getName(), false);
                             }
                         } else {
                             // 分配用户信息（id和汽车位置等）
@@ -74,7 +80,6 @@ public class GameServer {
                             newUser.setAttribute(socket, currentUser + 1, 120 + (currentUser + 1) * 120, 2800, 0,
                                     GameUtils.getCarPathString(currentUser + 1), true, false);
                             userList.put(newUser.getName(), newUser);
-                            isReady.put(newUser.getName(), false);
                             onlineList.add(newUser.getName());
                         }
 
@@ -92,6 +97,8 @@ public class GameServer {
                             new Thread(new ServerThread(newUser)).start();
 
                             // 向所有客户端发送玩家上线信息及游戏人数
+                            String content = "玩家 " + newUser.getName() + " 加入服务器";
+                            int id = newUser.getId();
                             userList.forEach((name, user) -> {
                                 if (user.isOnline()) {
                                     try {
@@ -99,8 +106,9 @@ public class GameServer {
                                                 user.getSocket().getOutputStream());
                                         JSONObject data = new JSONObject();
                                         data.put("type", "msg");
-                                        data.put("content", "玩家 " + name + " 加入服务器");
+                                        data.put("content", content);
                                         data.put("concurrent", onlineList.size());
+                                        data.put("id", id);
                                         outputStream.writeUTF(data.toString());
                                         outputStream.flush();
                                     } catch (Exception e) {
@@ -189,25 +197,29 @@ public class GameServer {
                         });
                     } else if (data.getString("type").equals("user")) {
                         // 处理用户信息及聊天信息
-                        // 创建临时变量
-                        User cur = userList.get(data.getString("name")), update = new User();
-                        update.setName(cur.getName());
-                        update.setAttribute(cur.getSocket(), cur.getId(), data.getDouble("x"), data.getDouble("y"),
-                                data.getDouble("dir"), cur.getImgPath(), data.getBoolean("online"),
-                                data.getBoolean("ready"));
-                        // 判断是否碰撞
-                        boolean isCollide = false;
-                        Iterator<User> it = userList.values().iterator();
-                        while (it.hasNext()) {
-                            User ne = it.next();
-                            if (!ne.getName().equals(cur.getName())) {
-                                if (update.isCollidingWith(ne))
-                                    isCollide = true;
-                            }
-                        }
-                        // 若不碰撞则将临时变量存入列表中
-                        if (!isCollide)
-                            userList.put(update.getName(), update);
+                        // // 创建临时变量
+                        // User cur = userList.get(data.getString("name")), update = new User();
+                        // update.setName(cur.getName());
+                        // update.setAttribute(cur.getSocket(), cur.getId(), data.getDouble("x"),
+                        // data.getDouble("y"),
+                        // data.getDouble("dir"), cur.getImgPath(), data.getBoolean("online"),
+                        // data.getBoolean("ready"));
+                        // // 判断是否碰撞
+                        // boolean isCollide = false;
+                        // Iterator<User> it = userList.values().iterator();
+                        // while (it.hasNext()) {
+                        // User ne = it.next();
+                        // if (!ne.getName().equals(cur.getName())) {
+                        // if (update.isCollidingWith(ne)) {
+                        // isCollide = true;
+                        // }
+                        // }
+                        // }
+                        // // 若不碰撞则将临时变量存入列表中
+                        // if (!isCollide)
+                        // userList.put(update.getName(), update);
+                        // else
+                        // System.out.println("crush");
                         // 向每个客户端发送数据
                         for (int i = 0; i < onlineList.size(); i++) {
                             // 不在线则跳过
@@ -216,14 +228,15 @@ public class GameServer {
                             try {
                                 DataOutputStream outputStream = new DataOutputStream(userList.get(
                                         onlineList.get(i)).getSocket().getOutputStream());
-                                JSONObject outjson = new JSONObject();
-                                outjson.put("type", "user");
-                                cur.writeInData(outjson);
-                                outputStream.writeUTF(outjson.toString());
+                                // JSONObject outjson = new JSONObject();
+                                // outjson.put("type", "user");
+                                // cur.writeInData(outjson);
+                                outputStream.writeUTF(json);
                                 outputStream.flush();
                             } catch (Exception e) {
                                 // 固定发送消息（lambda体内只能引用外部常量）
                                 final String content = "玩家 " + onlineList.get(i) + " 断开连接";
+                                final int id = userList.get(onlineList.get(i)).getId();
                                 // 更改用户连接状态
                                 userList.get(onlineList.get(i)).setOnline(false);
                                 onlineList.remove(i);
@@ -239,6 +252,7 @@ public class GameServer {
                                             msg.put("type", "msg");
                                             msg.put("content", content);
                                             msg.put("concurrent", onlineList.size());
+                                            msg.put("id", id);
                                             outputStream.writeUTF(msg.toString());
                                             outputStream.flush();
                                         } catch (Exception e2) {
@@ -252,8 +266,10 @@ public class GameServer {
 
                         // 更改准备状态
                         String curName = data.getString("name");
-                        isReady.put(curName, !isReady.get(curName));
-                        String content = "玩家 " + curName + (isReady.get(curName) ? " 已准备就绪" : " 取消了准备");
+                        userList.get(curName).setReady(!userList.get(curName).isReady());
+                        String content = "玩家 " + curName
+                                + (userList.get(curName).isReady() ? " 已准备就绪" : " 取消了准备");
+                        int id = userList.get(data.getString("name")).getId();
 
                         // 向其他用户发送消息
                         userList.forEach((name, user) -> {
@@ -266,6 +282,7 @@ public class GameServer {
                                     JSONObject msg = new JSONObject();
                                     msg.put("type", "msg");
                                     msg.put("content", content);
+                                    msg.put("id", id);
                                     outputStream.writeUTF(msg.toString());
                                     outputStream.flush();
                                 } catch (Exception e2) {
@@ -273,6 +290,37 @@ public class GameServer {
                                 }
                             }
                         });
+
+                        // 判断游戏是否开始
+                        int preparedCount = 0;
+                        Iterator<User> it = userList.values().iterator();
+                        while (it.hasNext()) {
+                            User user = it.next();
+                            if (user.isReady()) {
+                                preparedCount++;
+                            }
+                        }
+                        System.out.println(preparedCount);
+                        // 若准备人数超过两人且与注册人数相等时开始游戏
+                        if (preparedCount >= 2 && preparedCount == userList.size()) {
+                            isStart = true;
+                            userList.forEach((name, user) -> {
+                                // 判断是否在线
+                                if (user.isOnline()) {
+                                    try {
+                                        // 向客户端发送游戏开始的请求
+                                        DataOutputStream outputStream = new DataOutputStream(
+                                                user.getSocket().getOutputStream());
+                                        JSONObject start = new JSONObject();
+                                        start.put("type", "start");
+                                        outputStream.writeUTF(start.toString());
+                                        outputStream.flush();
+                                    } catch (Exception e) {
+                                        e.printStackTrace();
+                                    }
+                                }
+                            });
+                        }
                     }
 
                     // 线程休眠

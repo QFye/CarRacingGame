@@ -194,13 +194,47 @@ public class GameWin extends JFrame {
     // 面板三：游戏面板
     public class GamePanel extends JLayeredPane {
         public Car myCar;
-        public Map<Integer, User> userList = new TreeMap<>();
+        public TreeMap<Integer, User> userList = new TreeMap<>();
         public JButton settingsButton;
         public ChatPane chatPane = new ChatPane();
         private StopPanel stopPanel = new StopPanel();
         private int originX = 0, originY = -2200;// 长地图的相对原点坐标（设地图左上角为原点）
         private boolean readyStatusChanged = false;
         public TreeMap<Integer, PlayerInfoPanel> playerInfos = new TreeMap<>();
+        private boolean showCollisionVolumn = false;
+
+        public void countDown() {
+            JLabel countDownNumber = new JLabel("3", JLabel.CENTER);
+            countDownNumber.setFont(new Font("黑体", Font.BOLD, 80));
+            countDownNumber.setSize(400, 400);
+            countDownNumber.setLocation(300, 200);
+            this.add(countDownNumber);
+
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            countDownNumber.setText("2");
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            countDownNumber.setText("1");
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            countDownNumber.setText("start");
+            try {
+                Thread.sleep(500);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            this.remove(countDownNumber);
+        }
 
         public void updatePlayerInfoPanel(Integer i) {
             if (!playerInfos.get(i).isVisible()) {
@@ -321,6 +355,16 @@ public class GameWin extends JFrame {
                     // 用P键更改准备状态
                     if (e.getKeyChar() == 'p') {
                         setReadyStatusChanged(true);
+                        playerInfos.forEach((id, panel) -> {
+                            if (panel.getUserInfo().getId() == myCar.getid()) {
+                                String status = panel.getButtonText() == "准备" ? "取消" : "准备";
+                                panel.setButtonText(status);
+                            }
+                        });
+                    }
+                    // 用U键显示碰撞体积
+                    if (e.getKeyChar() == 'u') {
+                        showCollisionVolumn = !showCollisionVolumn;
                     }
                 }
 
@@ -424,7 +468,7 @@ public class GameWin extends JFrame {
         public void paintComponent(Graphics g) {
             // 更新汽车信息
             if (GameWin.status == Status.InGame || GameWin.status == Status.Suspend)
-                myCar.update();
+                myCar.update(userList);
             // 更新原点坐标（移动背景图片来实现汽车的移动效果）
             if (myCar.gety() > 500 && myCar.gety() < 2500) {
                 originY = 300 - (int) myCar.gety();
@@ -444,6 +488,11 @@ public class GameWin extends JFrame {
                 // 回溯画笔角度
                 g2d.rotate(-Math.toRadians(user.getDir()), user.getX() + originX + (GameUtils.CarWidth >> 1),
                         user.getY() + originY + (GameUtils.CarHeight >> 1));
+                if (showCollisionVolumn) {
+                    // 绘制碰撞体积（会丢失精度）
+                    g2d.drawImage(GameUtils.getCollisionDisplayerImg(), (int) user.getX() + originX,
+                            (int) user.getY() + originY, (int) user.getBoxWidth(), (int) user.getBoxHeight(), this);
+                }
 
                 // 绘制用户名
                 if (user.getName() != null) {
@@ -670,6 +719,24 @@ public class GameWin extends JFrame {
         public class PlayerInfoPanel extends JPanel {
             private User userInfo;
             private JLabel statusLabel;
+            private JButton preparedButton;
+
+            public User getUserInfo() {
+                return userInfo;
+            }
+
+            public void setStatusText(String status) {
+                String s = "玩家状态：";
+                statusLabel.setText(s + status);
+            }
+
+            public void setButtonText(String status) {
+                preparedButton.setText(status);
+            }
+
+            public String getButtonText() {
+                return preparedButton.getText();
+            }
 
             PlayerInfoPanel(User userInfo) {
                 this.userInfo = userInfo;
@@ -681,14 +748,44 @@ public class GameWin extends JFrame {
                 JLabel playerName = new JLabel(userInfo.getName(), JLabel.CENTER);
                 playerName.setSize(180, 40);
                 playerName.setLocation(0, 20);
-                playerName.setFont(new Font("宋体", Font.BOLD, 35));
+                playerName.setFont(new Font("宋体", Font.BOLD, 28));
                 this.add(playerName);
 
                 // 添加玩家状态信息
-                statusLabel = new JLabel("玩家状态：未准备", JLabel.CENTER);
-                statusLabel.setSize(120, 40);
+                String status;
+                if (!userInfo.isOnline()) {
+                    status = "离线";
+                } else if (userInfo.isReady()) {
+                    status = "已准备";
+                } else {
+                    status = "未准备";
+                }
+                statusLabel = new JLabel("玩家状态：" + status, JLabel.CENTER);
+                statusLabel.setSize(110, 40);
                 statusLabel.setLocation(0, 50);
                 this.add(statusLabel);
+
+                // 添加准备按钮
+                preparedButton = new JButton("准备");
+                preparedButton.setSize(55, 30);
+                preparedButton.setLocation(107, 55);
+                preparedButton.setFont(new Font("黑体", Font.PLAIN, 10));
+                preparedButton.addActionListener(new ActionListener() {
+                    @Override
+                    public void actionPerformed(ActionEvent e) {
+                        setReadyStatusChanged(true);
+                        playerInfos.forEach((id, panel) -> {
+                            if (panel.getUserInfo().getId() == myCar.getid()) {
+                                String status = panel.getButtonText() == "准备" ? "取消" : "准备";
+                                panel.setButtonText(status);
+                            }
+                        });
+                    }
+                });
+                this.add(preparedButton);
+                if (userInfo.getId() != myCar.getid()) {
+                    preparedButton.setVisible(false);
+                }
 
                 this.setBackground(new Color(135, 206, 235));
                 this.setLocation(820, 120 * userInfo.getId() - 20);

@@ -27,6 +27,12 @@ public class GameUtils {
         return Toolkit.getDefaultToolkit().getImage(path);
     }
 
+    // 获得碰撞体积显示图片
+    public static Image getCollisionDisplayerImg() {
+        String path = GameUtils.class.getClassLoader().getResource("imgs/collision_displayer.png").getPath();
+        return Toolkit.getDefaultToolkit().getImage(path);
+    }
+
     public static int CarWidth = 35;
     public static int CarHeight = 70;
 

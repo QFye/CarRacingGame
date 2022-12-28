@@ -15,44 +15,26 @@ public class User {
     private boolean online;
     private boolean ready;
 
-    // 获取图像中心的x坐标
-    public double getCenterX() {
-        double w = GameUtils.CarWidth, h = GameUtils.CarHeight;
-        double s = Math.sqrt(w * w + h * h) / 2;
-        double c = Math.atan(w / h);
-        double a = c - dir;
-        return x + s * Math.sin(Math.toRadians(a));
-    }
-
-    // 获取图像中心的y坐标
-    public double getCenterY() {
-        double w = GameUtils.CarWidth, h = GameUtils.CarHeight;
-        double s = Math.sqrt(w * w + h * h) / 2;
-        double c = Math.atan(w / h);
-        double a = c - dir;
-        return y + s * Math.cos(Math.toRadians(a));
-    }
-
     // 获取碰撞体积的width
     public double getBoxWidth() {
-        return GameUtils.CarWidth * Math.cos(Math.toRadians(dir)) + GameUtils.CarHeight * Math.sin(Math.toRadians(dir));
+        double b = dir;
+        if (b >= 180)
+            b -= 180;
+        if (b >= 90) {
+            b -= (b - 90) * 2;
+        }
+        return GameUtils.CarWidth * Math.cos(Math.toRadians(b)) + GameUtils.CarHeight * Math.sin(Math.toRadians(b));
     }
 
     // 获取碰撞体积的height
     public double getBoxHeight() {
-        return GameUtils.CarWidth * Math.sin(Math.toRadians(dir)) + GameUtils.CarHeight * Math.cos(Math.toRadians(dir));
-    }
-
-    // 判断是否碰撞
-    public boolean isCollidingWith(User another) {
-        if (Math.abs(getCenterX() - another.getCenterX()) <= (getBoxWidth() / 2) + (another.getBoxWidth() / 2)
-                && Math.abs(getCenterY() - another.getCenterY()) <= (getBoxHeight() / 2)
-                        + (another.getBoxHeight() / 2)) {
-            System.out.println("crush");
-            return true;
-        } else {
-            return false;
+        double b = dir;
+        if (b >= 180)
+            b -= 180;
+        if (b >= 90) {
+            b -= (b - 90) * 2;
         }
+        return GameUtils.CarWidth * Math.sin(Math.toRadians(b)) + GameUtils.CarHeight * Math.cos(Math.toRadians(b));
     }
 
     public void setName(String name) {
@@ -71,7 +53,7 @@ public class User {
         this.ready = ready;
     }
 
-    public void update(double x, double y, double dir) {
+    public void updatePosition(double x, double y, double dir) {
         this.x = x;
         this.y = y;
         this.dir = dir;

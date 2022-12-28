@@ -1,5 +1,9 @@
 package obj;
 
+import java.util.*;
+
+import utils.GameUtils;
+
 public class Car extends GameObj {
 
     private double speedx, speedy, maxSpeed, acceleratex, acceleratey;// 速度、最大行驶速度、加速度、方向（与y轴所成夹角）
@@ -68,6 +72,17 @@ public class Car extends GameObj {
         this.y = y;
     }
 
+    public void clearSpeed() {
+        speedx = 0;
+        speedy = 0;
+        acceleratex = 0;
+        acceleratey = 0;
+        maxSpeed = 1.5;
+        rspeed = 0;
+        raccelerate = 0;
+        maxrSpeed = 1.5;
+    }
+
     public void setid(int id) {
         this.id = id;
     }
@@ -76,9 +91,32 @@ public class Car extends GameObj {
         this.dir = dir;
     }
 
+    // 获取碰撞体积的width
+    public double getBoxWidth() {
+        double b = dir;
+        if (b >= 180)
+            b -= 180;
+        if (b >= 90) {
+            b -= (b - 90) * 2;
+        }
+        return GameUtils.CarWidth * Math.cos(Math.toRadians(b)) + GameUtils.CarHeight * Math.sin(Math.toRadians(b));
+    }
+
+    // 获取碰撞体积的height
+    public double getBoxHeight() {
+        double b = dir;
+        if (b >= 180)
+            b -= 180;
+        if (b >= 90) {
+            b -= (b - 90) * 2;
+        }
+        return GameUtils.CarWidth * Math.sin(Math.toRadians(b)) + GameUtils.CarHeight * Math.cos(Math.toRadians(b));
+    }
+
     // 更新汽车每一时刻的数值
-    public void update() {
+    public void update(TreeMap<Integer, User> userList) {
         // 平动计算
+        double lastX = x, lastY = y, lastDir = dir;
         speedx *= 0.99;// 设定一定阻力
         speedx += acceleratex;
         if (Math.abs(speedx) > maxSpeed)// 最大限速
@@ -98,21 +136,37 @@ public class Car extends GameObj {
         if (Math.abs(rspeed) > maxrSpeed)
             rspeed = rspeed > 0 ? maxrSpeed : -maxrSpeed;
         dir += rspeed;
-        dir %= 360;
+        dir = (dir + 360) % 360;
         raccelerate = 0;
+
+        // 判断是否与其他物体碰撞
+        Iterator<User> it = userList.values().iterator();
+        while (it.hasNext()) {
+            User another = it.next();
+            if (another.getId() == id) {
+                continue;
+            }
+            if (Math.abs(another.getX() - x) < (getBoxWidth() / 2) + (another.getBoxWidth() / 2)
+                    && Math.abs(another.getY() - y) < (getBoxHeight() / 2)
+                            + (another.getBoxHeight() / 2)) {
+                // 如果相撞，回退至上一次的状态
+                acceleratex = 0;
+                speedx = 0;
+                x = lastX;
+                dir = lastDir;
+                acceleratey = 0;
+                speedy = 0;
+                y = lastY;
+                break;
+            }
+        }
+
     }
 
     @Override
     public void setAttribute(int id, double x, double y, double dir, String ImgPath, int ImgWidth, int ImgHeight) {
         super.setAttribute(id, x, y, dir, ImgPath, ImgWidth, ImgHeight);
-        speedx = 0;
-        speedy = 0;
-        acceleratex = 0;
-        acceleratey = 0;
-        maxSpeed = 1.5;
-        rspeed = 0;
-        raccelerate = 0;
-        maxrSpeed = 1.5;
+        clearSpeed();
     }
 
 }
