@@ -490,8 +490,10 @@ public class GameWin extends JFrame {
                         user.getY() + originY + (GameUtils.CarHeight >> 1));
                 if (showCollisionVolumn) {
                     // 绘制碰撞体积（会丢失精度）
-                    g2d.drawImage(GameUtils.getCollisionDisplayerImg(), (int) user.getX() + originX,
-                            (int) user.getY() + originY, (int) user.getBoxWidth(), (int) user.getBoxHeight(), this);
+                    g2d.drawImage(GameUtils.getCollisionDisplayerImg(),
+                            (int) (user.getCenterX() + originX - user.getBoxWidth() / 2),
+                            (int) (user.getCenterY() + originY - user.getBoxHeight() / 2), (int) user.getBoxWidth(),
+                            (int) user.getBoxHeight(), this);
                 }
 
                 // 绘制用户名

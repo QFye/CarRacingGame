@@ -15,6 +15,16 @@ public class User {
     private boolean online;
     private boolean ready;
 
+    // 获取图像中心的x坐标
+    public double getCenterX() {
+        return x + (GameUtils.CarWidth >> 1);
+    }
+
+    // 获取图像中心的y坐标
+    public double getCenterY() {
+        return y + (GameUtils.CarHeight >> 1);
+    }
+
     // 获取碰撞体积的width
     public double getBoxWidth() {
         double b = dir;
