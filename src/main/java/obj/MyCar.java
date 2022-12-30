@@ -6,6 +6,19 @@ public class MyCar extends Car {
 
     private double speedx, speedy, maxSpeed, acceleratex, acceleratey;// 速度、最大行驶速度、加速度、方向（与y轴所成夹角）
     private double rspeed, raccelerate, maxrSpeed;// 方向、角速度、角加速度、最大旋转角速度
+    private double aunit = 0.1;// 加速时每帧增加的最小加速度
+
+    public void setMaxSpeed(double maxSpeed) {
+        this.maxSpeed = maxSpeed;
+    }
+
+    public double getAunit() {
+        return aunit;
+    }
+
+    public void setAunit(double aunit) {
+        this.aunit = aunit;
+    }
 
     public double getSpeedX() {
         return speedx;
@@ -134,15 +147,19 @@ public class MyCar extends Car {
             if (Math.abs(another.getCenterX() - getCenterX()) < (getBoxWidth() / 2) + (another.getBoxWidth() / 2)
                     && Math.abs(another.getCenterY() - getCenterY()) < (getBoxHeight() / 2)
                             + (another.getBoxHeight() / 2)) {
-                // 如果相撞，回退至上一次的状态
-                acceleratex = 0;
-                speedx = 0;
-                x = lastX;
-                dir = lastDir;
-                acceleratey = 0;
-                speedy = 0;
-                y = lastY;
-                break;
+                if (another.isCollectable()) {
+                    /* 道具类实现 */
+                } else {
+                    // 如果相撞，回退至上一次的状态
+                    acceleratex = 0;
+                    speedx = 0;
+                    x = lastX;
+                    dir = lastDir;
+                    acceleratey = 0;
+                    speedy = 0;
+                    y = lastY;
+                    break;
+                }
             }
         }
 

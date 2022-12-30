@@ -2,6 +2,8 @@ package server;
 
 import java.net.*;
 import java.util.*;
+
+import net.sf.json.JSONArray;
 import net.sf.json.JSONObject;
 import java.io.*;
 import obj.*;
@@ -243,10 +245,27 @@ public class GameServer {
                         System.out.println(preparedCount);
                         // 若准备人数超过两人且与注册人数相等时开始游戏
                         if (preparedCount >= 2 && preparedCount == userList.size()) {
+                            // 更改状态
                             isStart = true;
                             timer.start();
+
                             JSONObject start = new JSONObject();
                             start.put("type", "start");
+                            JSONArray array = new JSONArray();
+
+                            // 生成障碍物
+                            Random random = new Random();
+                            for (int i = 6; i <= 11; i++) {
+                                JSONObject barrier = new JSONObject();
+                                barrier.put("id", i);
+                                barrier.put("x", random.nextInt(180, 750));
+                                barrier.put("y", 400 + (i - 6) * 450);
+                                barrier.put("width", 60);
+                                barrier.put("height", 40);
+                                array.add(barrier);
+                            }
+                            start.put("barrier", array);
+
                             sendToAll(start);
                         }
                     } else if (data.getString("type").equals("arrival")) {

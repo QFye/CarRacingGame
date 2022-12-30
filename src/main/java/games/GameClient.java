@@ -6,6 +6,7 @@ import java.util.*;
 import javax.swing.JOptionPane;
 
 import games.GameWin.GamePanel;
+import net.sf.json.JSONArray;
 import net.sf.json.JSONObject;
 
 import java.io.*;
@@ -86,19 +87,6 @@ public class GameClient implements Runnable {
             e.printStackTrace();
             this.connectionState = false;
             System.out.println("客户端：连接失败");
-        }
-    }
-
-    // 重连服务器
-    public void reconnect() {
-        while (!connectionState) {
-            System.out.println("客户端：正在尝试重新连接");
-            connect();
-            try {
-                Thread.sleep(3000);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
         }
     }
 
@@ -254,13 +242,22 @@ public class GameClient implements Runnable {
                         }
 
                     } else if (data.getString("type").equals("start")) {
+                        // 接收开始信号后的处理
+                        JSONArray array = data.getJSONArray("barrier");
+                        for (Object o : array) {
+                            JSONObject jsonobj = (JSONObject) o;
+                            Barrier barrier = new Barrier(jsonobj.getInt("id"), jsonobj.getInt("x"),
+                                    jsonobj.getInt("y"), jsonobj.getInt("width"), jsonobj.getInt("height"));
+                            panel.objectList.put(barrier.getId(), barrier);
+                        }
+                        panel.playerInfos.get(userInfo.getId()).hideButton();
                         panel.countDown();
                         panel.myCar.setPosition(120 + panel.myCar.getId() * 120, 2800);
                         panel.myCar.setDir(0);
                         panel.myCar.clearSpeed();
                         start = true;
                     } else if (data.getString("type").equals("arrival")) {
-
+                        // 接收到达终点后的信号处理
                         panel.chatPane.appendMsg(new Date() + "<br>" + data.getString("msg"));
                         if (data.getInt("id") == userInfo.getId()) {
                             panel.setTime(data.getLong("time"));

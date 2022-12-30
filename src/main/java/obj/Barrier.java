@@ -29,7 +29,7 @@ public class Barrier extends GameObj {
     }
 
     public Barrier(int id, double x, double y, int ImgWidth, int ImgHeight) {
-        super(id, x, y, 0, path, ImgWidth, ImgHeight);
+        super(id, x, y, 0, path, ImgWidth, ImgHeight, false);
     }
 
 }

@@ -8,6 +8,7 @@ public abstract class GameObj extends JComponent {
     protected double x, y, dir;// x,y坐标、方向角（与y轴负方向夹角）
     protected String ImgPath;// 图像路径
     protected int ImgWidth, ImgHeight;// 图像长宽
+    protected boolean collectable;// 是否可以被收集
 
     public int getId() {
         return id;
@@ -37,6 +38,10 @@ public abstract class GameObj extends JComponent {
         return ImgHeight;
     }
 
+    public boolean isCollectable() {
+        return collectable;
+    }
+
     public void setAttribute(int id, double x, double y, double dir, String ImgPath, int ImgWidth, int ImgHeight) {
         this.id = id;
         this.x = x;
@@ -47,7 +52,7 @@ public abstract class GameObj extends JComponent {
         this.ImgHeight = ImgHeight;
     }
 
-    GameObj(int id, double x, double y, double dir, String ImgPath, int ImgWidth, int ImgHeight) {
+    GameObj(int id, double x, double y, double dir, String ImgPath, int ImgWidth, int ImgHeight, boolean collectable) {
         this.id = id;
         this.x = x;
         this.y = y;
@@ -55,6 +60,7 @@ public abstract class GameObj extends JComponent {
         this.ImgPath = ImgPath;
         this.ImgWidth = ImgWidth;
         this.ImgHeight = ImgHeight;
+        this.collectable = collectable;
     }
 
     // 获取图像中心的x坐标

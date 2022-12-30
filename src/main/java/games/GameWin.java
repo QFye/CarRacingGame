@@ -153,7 +153,6 @@ public class GameWin extends JFrame {
                         container.add(gamePanel, "game");
                     } else {
                         new Thread(new GameClient(gamePanel)).start();
-                        ;
                     }
                     // 更新用户名
                     playerName = textField.getText();
@@ -298,10 +297,7 @@ public class GameWin extends JFrame {
                 myCar.setAttribute(1, 240, 2800, 0, GameUtils.getCarPathString(1), GameUtils.CarWidth,
                         GameUtils.CarHeight);
             }
-            objectList.put(6, new Barrier(6, 300, 2000, 60, 40));
-            objectList.put(7, new Barrier(7, 460, 1300, 60, 40));
-            objectList.put(8, new Barrier(8, 200, 2300, 60, 40));
-            objectList.put(9, new Barrier(9, 640, 600, 60, 40));
+
             this.setLayout(null);
 
             // 设置暂停/继续按钮
@@ -346,16 +342,16 @@ public class GameWin extends JFrame {
 
             // 键盘监听
             this.addKeyListener(new KeyListener() {
-                Boolean up = false, down = false, left = false, right = false;
+                Boolean up = false, down = false, left = false, right = false, space = false, canAccelerate = true;
 
                 private void upMove() {
-                    myCar.setAccelerate(0.1 * Math.sin(Math.toRadians(myCar.getDir())),
-                            -0.1 * Math.cos(Math.toRadians(myCar.getDir())));
+                    myCar.setAccelerate(myCar.getAunit() * Math.sin(Math.toRadians(myCar.getDir())),
+                            -myCar.getAunit() * Math.cos(Math.toRadians(myCar.getDir())));
                 }
 
                 private void downMove() {
-                    myCar.setAccelerate(-0.1 * Math.sin(Math.toRadians(myCar.getDir())),
-                            0.1 * Math.cos(Math.toRadians(myCar.getDir())));
+                    myCar.setAccelerate(-myCar.getAunit() * Math.sin(Math.toRadians(myCar.getDir())),
+                            myCar.getAunit() * Math.cos(Math.toRadians(myCar.getDir())));
                 }
 
                 private void leftRotate() {
@@ -404,7 +400,19 @@ public class GameWin extends JFrame {
                     if (e.getKeyCode() == KeyEvent.VK_RIGHT) {
                         right = true;
                     }
+                    if (e.getKeyCode() == KeyEvent.VK_SPACE) {
+                        space = true;
+                    }
 
+                    if (space && canAccelerate) {
+                        myCar.setMaxSpeed(1.5 * myCar.getMaxSpeed());
+                        myCar.setAunit(myCar.getAunit() * 1.5);
+                        canAccelerate = false;
+                    }
+                    if (up && space) {
+                        upMove();
+
+                    }
                     if (up) {
                         upMove();
                     }
@@ -451,6 +459,12 @@ public class GameWin extends JFrame {
                     if (e.getKeyCode() == KeyEvent.VK_RIGHT) {
                         right = false;
                     }
+                    if (e.getKeyCode() == KeyEvent.VK_SPACE) {
+                        myCar.setMaxSpeed(myCar.getMaxSpeed() / 1.5);
+                        myCar.setAunit(myCar.getAunit() / 1.5);
+                        space = false;
+                        canAccelerate = true;
+                    }
                     // ESC键打开暂停面板
                     if (e.getKeyCode() == KeyEvent.VK_ESCAPE) {
                         GameWin.status = Status.Suspend;
@@ -461,6 +475,7 @@ public class GameWin extends JFrame {
                 }
 
             });
+
             this.add(myCar);
 
             // 点击游戏面板时将键盘焦点从聊天栏转移到游戏
@@ -752,6 +767,10 @@ public class GameWin extends JFrame {
                 return userInfo;
             }
 
+            public void hideButton() {
+                preparedButton.setVisible(false);
+            }
+
             public void setStatusText(String status) {
                 String s = "玩家状态：";
                 statusLabel.setText(s + status);
@@ -838,13 +857,13 @@ public class GameWin extends JFrame {
             JLabel info = new JLabel("<html>通关时间：" + time / 60 + "分" + time % 60 + "秒<br><br>名次：" + rank + "</html>",
                     JLabel.CENTER);
             info.setFont(new Font("宋体", Font.PLAIN, 30));
-            info.setLocation(300, 290);
+            info.setLocation(350, 290);
             info.setSize(300, 150);
             this.add(info);
 
             // 返回主菜单按钮
             JButton backButton = new JButton("返回主菜单");
-            backButton.setLocation(200, 550);
+            backButton.setLocation(200, 480);
             backButton.setSize(200, 80);
             backButton.addActionListener(new ActionListener() {
                 @Override
@@ -856,8 +875,8 @@ public class GameWin extends JFrame {
 
             // 退出游戏按钮
             JButton exitButton = new JButton("退出游戏");
-            backButton.setLocation(600, 550);
-            backButton.setSize(200, 80);
+            exitButton.setLocation(600, 480);
+            exitButton.setSize(200, 80);
             exitButton.addActionListener(e -> {
                 System.exit(0);
             });

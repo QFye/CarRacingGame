@@ -109,10 +109,10 @@ public class Car extends GameObj {
     }
 
     public Car(int id) {
-        super(id, 0, 0, 0, null, GameUtils.CarWidth, GameUtils.CarHeight);
+        super(id, 0, 0, 0, null, GameUtils.CarWidth, GameUtils.CarHeight, false);
     }
 
     public Car() {
-        super(1, 0, 0, 0, null, GameUtils.CarWidth, GameUtils.CarHeight);
+        super(1, 0, 0, 0, null, GameUtils.CarWidth, GameUtils.CarHeight, false);
     }
 }

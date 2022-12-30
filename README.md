@@ -20,14 +20,16 @@ CAR RACING DEMO
     │  │  │  │      Status.java
     │  │  │  │      
     │  │  │  ├─obj
+    │  │  │  │      Barrier.java
     │  │  │  │      Car.java
     │  │  │  │      GameObj.java
-    │  │  │  │      User.java
+    │  │  │  │      MyCar.java
     │  │  │  │      
     │  │  │  ├─server
     │  │  │  │      GameServer.java
     │  │  │  │      
     │  │  │  └─utils
+    │  │  │          GameTimer.java
     │  │  │          GameUtils.java
     │  │  │          
     │  │  └─resources
@@ -35,20 +37,20 @@ CAR RACING DEMO
     │  │      │      tree.txt
     │  │      │      
     │  │      └─imgs
+    │  │              barrier2.png
     │  │              bg.jpg
     │  │              car1.png
     │  │              car2.png
     │  │              car3.png
     │  │              car4.png
     │  │              car5.png
-    |  |              menubg.jpeg
+    │  │              collision_displayer.png
+    │  │              menubg.png
+    │  │              settlementbg.png
     │  │              
     │  └─test
     │      └─java
     │          └─games
-    │                  AppTest.java
-    │                  Student.java
-    │                  test.java
     │                  
     └─target
         ├─classes
@@ -60,38 +62,57 @@ CAR RACING DEMO
         │  │      GameClient$socketListenThread.class
         │  │      GameClient.class
         │  │      GameWin$GamePanel$1.class
+        │  │      GameWin$GamePanel$2.class
+        │  │      GameWin$GamePanel$3.class
+        │  │      GameWin$GamePanel$ChatPane$1.class
+        │  │      GameWin$GamePanel$ChatPane.class
+        │  │      GameWin$GamePanel$PlayerInfoPanel$1.class
+        │  │      GameWin$GamePanel$PlayerInfoPanel.class
+        │  │      GameWin$GamePanel$StopPanel$1.class
+        │  │      GameWin$GamePanel$StopPanel$2.class
+        │  │      GameWin$GamePanel$StopPanel$3.class
+        │  │      GameWin$GamePanel$StopPanel.class
         │  │      GameWin$GamePanel.class
+        │  │      GameWin$InitPanel$1.class
+        │  │      GameWin$InitPanel$2.class
+        │  │      GameWin$InitPanel.class
         │  │      GameWin$MenuPanel$1.class
         │  │      GameWin$MenuPanel.class
+        │  │      GameWin$SettlementPanel$1.class
+        │  │      GameWin$SettlementPanel.class
         │  │      GameWin.class
         │  │      Status.class
         │  │      
         │  ├─imgs
+        │  │      barrier1.png
+        │  │      barrier2.png
+        │  │      barrier3.png
         │  │      bg.jpg
         │  │      car1.png
         │  │      car2.png
         │  │      car3.png
         │  │      car4.png
         │  │      car5.png
-        |  |      menubg.jpeg
+        │  │      collision_displayer.png
+        │  │      menubg.png
+        │  │      settlementbg.png
         │  │      
         │  ├─obj
+        │  │      Barrier.class
         │  │      Car.class
         │  │      GameObj.class
-        │  │      User.class
+        │  │      MyCar.class
         │  │      
         │  ├─server
         │  │      GameServer$ServerThread.class
         │  │      GameServer.class
         │  │      
         │  └─utils
+        │          GameTimer.class
         │          GameUtils.class
         │          
         └─test-classes
             └─games
-                    AppTest.class
-                    Student.class
-                    test.class
 
 ## 版本更新
 ---
@@ -191,7 +212,13 @@ CAR RACING DEMO
 
 ---
 
+##### $Test\ V0.2.4\ 版本内容更新$
+1. 能随机x坐标生成障碍物
+2. 同时按下空格和上键可以小幅提高汽车行驶速度
+
+---
+
 ## 待更新或修复内容
-1. 添加其他障碍物或道具
+1. 添加更多障碍物或道具
 2. 游戏美术素材
 3. 增加进度条
