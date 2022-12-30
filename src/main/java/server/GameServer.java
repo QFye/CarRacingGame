@@ -5,7 +5,7 @@ import java.util.*;
 import net.sf.json.JSONObject;
 import java.io.*;
 import obj.*;
-import utils.GameUtils;
+import utils.*;
 
 public class GameServer {
 
@@ -15,9 +15,28 @@ public class GameServer {
     public ArrayList<String> onlineList = new ArrayList<>();
     // 游戏是否开始
     private boolean isStart = false;
+    // 计时器
+    private GameTimer timer = new GameTimer();
+    // 计数器（到达终点的名次）
+    private int counter = 0;
 
     public static void main(String[] args) {
         new GameServer();
+    }
+
+    // 向所有玩家发送消息
+    public void sendToAll(JSONObject data) {
+        userList.forEach((name, user) -> {
+            if (user.isOnline()) {
+                try {
+                    DataOutputStream outputStream = new DataOutputStream(user.getSocket().getOutputStream());
+                    outputStream.writeUTF(data.toString());
+                    outputStream.flush();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        });
     }
 
     GameServer() {
@@ -97,25 +116,12 @@ public class GameServer {
                             new Thread(new ServerThread(newUser)).start();
 
                             // 向所有客户端发送玩家上线信息及游戏人数
-                            String content = "玩家 " + newUser.getName() + " 加入服务器";
-                            int id = newUser.getId();
-                            userList.forEach((name, user) -> {
-                                if (user.isOnline()) {
-                                    try {
-                                        DataOutputStream outputStream = new DataOutputStream(
-                                                user.getSocket().getOutputStream());
-                                        JSONObject data = new JSONObject();
-                                        data.put("type", "msg");
-                                        data.put("content", content);
-                                        data.put("concurrent", onlineList.size());
-                                        data.put("id", id);
-                                        outputStream.writeUTF(data.toString());
-                                        outputStream.flush();
-                                    } catch (Exception e) {
-                                        e.printStackTrace();
-                                    }
-                                }
-                            });
+                            JSONObject data = new JSONObject();
+                            data.put("type", "msg");
+                            data.put("content", "玩家 " + newUser.getName() + " 加入服务器");
+                            data.put("concurrent", onlineList.size());
+                            data.put("id", newUser.getId());
+                            sendToAll(data);
                         }
                     }
                 }
@@ -179,61 +185,39 @@ public class GameServer {
                     if (data.getString("type").equals("heart")) {
                         int heartsource = data.getInt("from");
                         System.out.println("服务器端：接收玩家" + heartsource + "的心跳包");
-                    } else if (data.getString("type").equals("msg")) {
+
                         // 处理消息发送
-                        userList.forEach((name, user) -> {
-                            // 判断是否在线
-                            if (user.isOnline()) {
-                                try {
-                                    // 向在线用户发送断连消息
-                                    DataOutputStream outputStream = new DataOutputStream(
-                                            user.getSocket().getOutputStream());
-                                    outputStream.writeUTF(json);
-                                    outputStream.flush();
-                                } catch (Exception e2) {
-                                    e2.printStackTrace();
-                                }
-                            }
-                        });
+                    } else if (data.getString("type").equals("msg")) {
+                        sendToAll(JSONObject.fromObject(json));
+
+                        // 处理用户信息
                     } else if (data.getString("type").equals("user")) {
-                        // 处理用户信息及聊天信息
                         // 向每个客户端发送数据
                         for (int i = 0; i < onlineList.size(); i++) {
-                            // 不在线则跳过
-                            if (!userList.get(onlineList.get(i)).isOnline())
-                                continue;
                             try {
                                 DataOutputStream outputStream = new DataOutputStream(userList.get(
                                         onlineList.get(i)).getSocket().getOutputStream());
+                                JSONObject indata = JSONObject.fromObject(json);
+                                // 更新服务器信息列表
+                                Car car = userList.get(indata.getString("name"));
+                                car.updatePosition(indata.getDouble("x"), indata.getDouble("y"),
+                                        indata.getDouble("dir"));
+                                // 转发给客户端
                                 outputStream.writeUTF(json);
                                 outputStream.flush();
                             } catch (Exception e) {
-                                // 固定发送消息
-                                String content = "玩家 " + onlineList.get(i) + " 断开连接";
-                                int id = userList.get(onlineList.get(i)).getId();
+
                                 // 更改用户连接状态
                                 userList.get(onlineList.get(i)).setOnline(false);
                                 onlineList.remove(i);
                                 // 向其他用户发送断连提示
-                                userList.forEach((name, user) -> {
-                                    // 判断是否在线
-                                    if (user.isOnline()) {
-                                        try {
-                                            // 向在线用户发送断连消息
-                                            DataOutputStream outputStream = new DataOutputStream(
-                                                    user.getSocket().getOutputStream());
-                                            JSONObject msg = new JSONObject();
-                                            msg.put("type", "msg");
-                                            msg.put("content", content);
-                                            msg.put("concurrent", onlineList.size());
-                                            msg.put("id", id);
-                                            outputStream.writeUTF(msg.toString());
-                                            outputStream.flush();
-                                        } catch (Exception e2) {
-                                            e2.printStackTrace();
-                                        }
-                                    }
-                                });
+                                JSONObject msg = new JSONObject();
+                                msg.put("type", "msg");
+                                msg.put("content", "玩家 " + onlineList.get(i) + " 断开连接");
+                                msg.put("concurrent", onlineList.size());
+                                msg.put("id", userList.get(onlineList.get(i)).getId());
+                                sendToAll(msg);
+
                             }
                         }
                     } else if (data.getString("type").equals("ready")) {
@@ -241,29 +225,11 @@ public class GameServer {
                         // 更改准备状态
                         String curName = data.getString("name");
                         userList.get(curName).setReady(!userList.get(curName).isReady());
-                        String content = "玩家 " + curName
-                                + (userList.get(curName).isReady() ? " 已准备就绪" : " 取消了准备");
-                        int id = userList.get(data.getString("name")).getId();
-
-                        // 向其他用户发送消息
-                        userList.forEach((name, user) -> {
-                            // 判断是否在线
-                            if (user.isOnline()) {
-                                try {
-                                    // 向在线用户发送断连消息
-                                    DataOutputStream outputStream = new DataOutputStream(
-                                            user.getSocket().getOutputStream());
-                                    JSONObject msg = new JSONObject();
-                                    msg.put("type", "msg");
-                                    msg.put("content", content);
-                                    msg.put("id", id);
-                                    outputStream.writeUTF(msg.toString());
-                                    outputStream.flush();
-                                } catch (Exception e2) {
-                                    e2.printStackTrace();
-                                }
-                            }
-                        });
+                        JSONObject msg = new JSONObject();
+                        msg.put("type", "msg");
+                        msg.put("content", "玩家 " + curName + (userList.get(curName).isReady() ? " 已准备就绪" : " 取消了准备"));
+                        msg.put("id", userList.get(data.getString("name")).getId());
+                        sendToAll(msg);
 
                         // 判断游戏是否开始
                         int preparedCount = 0;
@@ -278,23 +244,30 @@ public class GameServer {
                         // 若准备人数超过两人且与注册人数相等时开始游戏
                         if (preparedCount >= 2 && preparedCount == userList.size()) {
                             isStart = true;
-                            userList.forEach((name, user) -> {
-                                // 判断是否在线
-                                if (user.isOnline()) {
-                                    try {
-                                        // 向客户端发送游戏开始的请求
-                                        DataOutputStream outputStream = new DataOutputStream(
-                                                user.getSocket().getOutputStream());
-                                        JSONObject start = new JSONObject();
-                                        start.put("type", "start");
-                                        outputStream.writeUTF(start.toString());
-                                        outputStream.flush();
-                                    } catch (Exception e) {
-                                        e.printStackTrace();
-                                    }
-                                }
-                            });
+                            timer.start();
+                            JSONObject start = new JSONObject();
+                            start.put("type", "start");
+                            sendToAll(start);
                         }
+                    } else if (data.getString("type").equals("arrival")) {
+
+                        counter++;
+                        timer.finish();
+                        long arriveTime = timer.lastingSeconds();
+                        String content = "玩家 " + data.getString("name") + " 到达了终点<br>用时" + arriveTime / 60 + "分"
+                                + arriveTime % 60 + "秒，取得了本场游戏的第" + counter + "名";
+                        JSONObject result = new JSONObject();
+                        result.put("type", "arrival");
+                        result.put("id", userList.get(data.getString("name")).getId());
+                        result.put("time", arriveTime);
+                        result.put("rank", counter);
+                        result.put("msg", content);
+                        if (counter == userList.size()) {
+                            result.put("settlement", "");
+                            isStart = false;
+                        }
+                        sendToAll(result);
+
                     }
 
                     // 线程休眠

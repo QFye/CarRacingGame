@@ -112,7 +112,7 @@ public class MyCar extends Car {
         raccelerate = 0;
 
         // 判断是否到达边界
-        if (getx() <= 142 || getx() + getBoxWidth() >= 900 || gety() <= 200
+        if (getx() <= 142 || getx() + getBoxWidth() >= 900 || gety() <= 100
                 || gety() + getBoxHeight() >= 2890) {
             acceleratex = 0;
             speedx = 0;

@@ -2,7 +2,7 @@ package obj;
 
 public class Barrier extends GameObj {
 
-    private static String path = "imgs/barrier1.png";
+    private static String path = "imgs/barrier2.png";
 
     // 获取图像中心的x坐标
     @Override

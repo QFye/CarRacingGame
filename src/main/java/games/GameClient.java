@@ -152,8 +152,8 @@ public class GameClient implements Runnable {
 
                     if (start) {
 
-                        // 判断是否达到胜利条件（随便写的，后面会改）
-                        if (panel.myCar.gety() <= 200 && GameWin.status != Status.Suceeded) {
+                        // 判断是否达到胜利条件
+                        if (panel.myCar.gety() <= 122 && GameWin.status != Status.Suceeded) {
                             // 更改状态
                             GameWin.status = Status.Suceeded;
                             // 客户端显示
@@ -162,8 +162,8 @@ public class GameClient implements Runnable {
                             // 将胜利信息发送给服务器
                             DataOutputStream outputStream = new DataOutputStream(socket.getOutputStream());
                             JSONObject data = new JSONObject();
-                            data.put("type", "msg");
-                            data.put("content", "玩家 " + userInfo.getName() + " 到达了终点");
+                            data.put("type", "arrival");
+                            data.put("name", userInfo.getName());
                             outputStream.writeUTF(data.toString());
                         }
 
@@ -233,8 +233,6 @@ public class GameClient implements Runnable {
                         panel.objectList.put(user.getId(), user);
                         panel.updatePlayerInfoPanel(user.getId());
 
-                        // System.out.println(user.getId() + ", " + user.getx() + ", " + user.gety());
-
                     } else if (data.getString("type").equals("msg")) {
 
                         // 接收消息类信息
@@ -261,6 +259,21 @@ public class GameClient implements Runnable {
                         panel.myCar.setDir(0);
                         panel.myCar.clearSpeed();
                         start = true;
+                    } else if (data.getString("type").equals("arrival")) {
+
+                        panel.chatPane.appendMsg(new Date() + "<br>" + data.getString("msg"));
+                        if (data.getInt("id") == userInfo.getId()) {
+                            panel.setTime(data.getLong("time"));
+                            panel.setRank(data.getInt("rank"));
+                        }
+                        if (data.containsKey("settlement")) {
+                            panel.generateSettlementPanel();
+                            panel.getCardLayout().show(panel.getGameWinContainer(), "settlement");
+                            connectionState = false;
+                            start = false;
+                            GameWin.status = Status.Waiting;
+                        }
+
                     }
                 }
 

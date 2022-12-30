@@ -23,7 +23,13 @@ public class GameUtils {
 
     // 获得主菜单背景图片
     public static Image getMenuBgImg() {
-        String path = GameUtils.class.getClassLoader().getResource("imgs/menubg.jpeg").getPath();
+        String path = GameUtils.class.getClassLoader().getResource("imgs/menubg.png").getPath();
+        return Toolkit.getDefaultToolkit().getImage(path);
+    }
+
+    // 获得结算界面背景图片
+    public static Image getSettlementBgImg() {
+        String path = GameUtils.class.getClassLoader().getResource("imgs/settlementbg.png").getPath();
         return Toolkit.getDefaultToolkit().getImage(path);
     }
 

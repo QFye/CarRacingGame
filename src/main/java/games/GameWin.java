@@ -15,10 +15,13 @@ public class GameWin extends JFrame {
     private MenuPanel menuPanel;
     private InitPanel initPanel;
     private GamePanel gamePanel;
+    private SettlementPanel settlementPanel;
     public static int WightWidth = 1000, WightHeight = 800;// 窗体长宽
     private CardLayout cardLayout = new CardLayout();
     private Container container;
     private String playerName;
+    private int rank;
+    private long time;
 
     public void launch() {
         // 设置布局
@@ -34,7 +37,7 @@ public class GameWin extends JFrame {
         // 设置窗口位置
         this.setLocationRelativeTo(null);
         // 设置窗口标题
-        this.setTitle("我的飞车");
+        this.setTitle("Crazy Speed");
         // 设置不可改变大小
         this.setResizable(false);
         // 设置退出方式
@@ -58,11 +61,6 @@ public class GameWin extends JFrame {
 
         MenuPanel() {
             this.setLayout(null);
-
-            // 添加显示标题
-            JLabel titleLabel = new JLabel("我的飞车");
-            titleLabel.setFont(new Font("仿宋", Font.BOLD, 60));
-            titleLabel.setBounds(370, 150, 300, 80);
 
             // 开始按钮
             JButton startButton = new JButton("开始游戏");
@@ -101,7 +99,6 @@ public class GameWin extends JFrame {
             });
 
             // 添加面板
-            this.add(titleLabel);
             this.add(startButton);
             this.add(ruleButton);
             this.add(exitButton);
@@ -188,21 +185,23 @@ public class GameWin extends JFrame {
             this.setSize(400, 200);
             this.setLocationRelativeTo(null);
             this.setDefaultCloseOperation(DISPOSE_ON_CLOSE);
+
         }
     }
 
     // 面板三：游戏面板
     public class GamePanel extends JLayeredPane {
         public MyCar myCar;
-        public TreeMap<Integer, GameObj> objectList = new TreeMap<>();
+        public TreeMap<Integer, GameObj> objectList = new TreeMap<>();// 所有物体列表<编号 -> 物体>
         public JButton settingsButton;
         public ChatPane chatPane = new ChatPane();
         private StopPanel stopPanel = new StopPanel();
         private int originX = 0, originY = -2200;// 长地图的相对原点坐标（设地图左上角为原点）
-        private boolean readyStatusChanged = false;
+        private boolean readyStatusChanged = false;// 检测玩家的准备状态是否发生了改变
         public TreeMap<Integer, PlayerInfoPanel> playerInfos = new TreeMap<>();
         private boolean showCollisionVolumn = false;
 
+        // 执行倒计时
         public void countDown() {
             JLabel countDownNumber = new JLabel("3", JLabel.CENTER);
             countDownNumber.setFont(new Font("黑体", Font.BOLD, 80));
@@ -236,6 +235,7 @@ public class GameWin extends JFrame {
             this.remove(countDownNumber);
         }
 
+        // 更新编号为i的用户信息面板
         public void updatePlayerInfoPanel(Integer i) {
             if (!playerInfos.get(i).isVisible()) {
                 PlayerInfoPanel playerInfoPanel = new PlayerInfoPanel((Car) objectList.get(i));
@@ -249,10 +249,12 @@ public class GameWin extends JFrame {
             return playerName;
         }
 
+        // 获取布局管理器
         public CardLayout getCardLayout() {
             return cardLayout;
         }
 
+        // 获取面板底层容器
         public Container getGameWinContainer() {
             return container;
         }
@@ -265,6 +267,15 @@ public class GameWin extends JFrame {
             this.readyStatusChanged = readyStatusChanged;
         }
 
+        public void setTime(long _time) {
+            time = _time;
+        }
+
+        public void setRank(int _rank) {
+            rank = _rank;
+        }
+
+        // 获取键盘焦点
         public void getFocused() {
             if (!this.isFocusable()) {
                 this.setFocusable(true);
@@ -274,6 +285,12 @@ public class GameWin extends JFrame {
             }
         }
 
+        // 生成结算面板
+        public void generateSettlementPanel() {
+            settlementPanel = new SettlementPanel();
+            getGameWinContainer().add(settlementPanel, "settlement");
+        }
+
         public void launch() {
             // 生成myCar
             if (myCar == null) {
@@ -281,10 +298,10 @@ public class GameWin extends JFrame {
                 myCar.setAttribute(1, 240, 2800, 0, GameUtils.getCarPathString(1), GameUtils.CarWidth,
                         GameUtils.CarHeight);
             }
-            objectList.put(6, new Barrier(6, 300, 2000, 80, 30));
-            objectList.put(7, new Barrier(7, 460, 1300, 80, 30));
-            objectList.put(8, new Barrier(8, 200, 2300, 80, 30));
-            objectList.put(9, new Barrier(9, 640, 600, 80, 30));
+            objectList.put(6, new Barrier(6, 300, 2000, 60, 40));
+            objectList.put(7, new Barrier(7, 460, 1300, 60, 40));
+            objectList.put(8, new Barrier(8, 200, 2300, 60, 40));
+            objectList.put(9, new Barrier(9, 640, 600, 60, 40));
             this.setLayout(null);
 
             // 设置暂停/继续按钮
@@ -473,21 +490,17 @@ public class GameWin extends JFrame {
             if (GameWin.status == Status.InGame || GameWin.status == Status.Suspend)
                 myCar.update(objectList);
             // 更新原点坐标（移动背景图片来实现汽车的移动效果）
-            if (myCar.gety() > 500 && myCar.gety() < 2500) {
+            if (myCar.gety() > 300 && myCar.gety() < 2500) {
                 originY = 300 - (int) myCar.gety();
+            } else if (myCar.gety() >= 2500) {
+                originY = -2200;
             }
             // 绘制背景
             g.drawImage(GameUtils.getBgImg(), originX, originY, 1000, 3000, this);
-            // 绘制汽车
+            // 绘制物体
             Graphics2D g2d = (Graphics2D) g;
             objectList.forEach((id, obj) -> {
 
-                // System.out.println("(id, x, y) = " + obj.getId() + ", " + obj.getx() + ", " +
-                // obj.gety());
-                // System.out.println("(obj.getx() + originX, obj.getx() + originX +
-                // (obj.getImgWidth() >> 1)) = " +
-                // obj.getx() + originX + ", " + obj.getx() + originX + (obj.getImgWidth() >>
-                // 1));
                 // 旋转画笔
                 g2d.rotate(Math.toRadians(obj.getDir()), obj.getx() + originX + (obj.getImgWidth() >> 1),
                         obj.gety() + originY + (obj.getImgHeight() >> 1));
@@ -682,6 +695,8 @@ public class GameWin extends JFrame {
                         button.addActionListener(new ActionListener() {
                             @Override
                             public void actionPerformed(ActionEvent e) {
+                                // 恢复文字描述
+                                settingsButton.setText("暂停");
                                 // 隐藏暂停面板
                                 stopPanel.setVisible(false);
                                 // 更改游戏状态
@@ -727,6 +742,7 @@ public class GameWin extends JFrame {
 
         }
 
+        // 用户信息面板
         public class PlayerInfoPanel extends JPanel {
             private Car userInfo;
             private JLabel statusLabel;
@@ -802,6 +818,57 @@ public class GameWin extends JFrame {
                 this.setLocation(820, 120 * userInfo.getId() - 20);
             }
         }
+
+    }
+
+    // 面板四：结算面板
+    public class SettlementPanel extends JPanel {
+
+        SettlementPanel() {
+            this.setLayout(null);
+
+            // 标题
+            JLabel label = new JLabel("游戏结束", JLabel.CENTER);
+            label.setFont(new Font("宋体", Font.BOLD, 70));
+            label.setLocation(200, 200);
+            label.setSize(600, 80);
+            this.add(label);
+
+            // 信息
+            JLabel info = new JLabel("<html>通关时间：" + time / 60 + "分" + time % 60 + "秒<br><br>名次：" + rank + "</html>",
+                    JLabel.CENTER);
+            info.setFont(new Font("宋体", Font.PLAIN, 30));
+            info.setLocation(300, 290);
+            info.setSize(300, 150);
+            this.add(info);
+
+            // 返回主菜单按钮
+            JButton backButton = new JButton("返回主菜单");
+            backButton.setLocation(200, 550);
+            backButton.setSize(200, 80);
+            backButton.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    cardLayout.show(container, "menu");
+                }
+            });
+            this.add(backButton);
+
+            // 退出游戏按钮
+            JButton exitButton = new JButton("退出游戏");
+            backButton.setLocation(600, 550);
+            backButton.setSize(200, 80);
+            exitButton.addActionListener(e -> {
+                System.exit(0);
+            });
+            this.add(exitButton);
+        }
+
+        @Override
+        public void paintComponent(Graphics g) {
+            g.drawImage(GameUtils.getSettlementBgImg(), 0, 0, GameWin.WightWidth, GameWin.WightHeight, this);
+        }
+
     }
 
 }
